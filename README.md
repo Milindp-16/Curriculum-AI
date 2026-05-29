@@ -1,36 +1,117 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# 🚀 AI Course Builder
 
-## Getting Started
+AI Course Builder is a powerful, full-stack Next.js application that leverages Artificial Intelligence to automatically generate comprehensive learning courses. Users can input a topic, and the application will dynamically create a curriculum, generate detailed chapter explanations, and automatically fetch highly relevant YouTube video tutorials to accompany the text content.
 
-First, run the development server:
+## ✨ Major Features
 
+* **🪄 AI-Powered Course Generation:** Input a topic and let AI generate a structured syllabus, chapter titles, and detailed, multi-paragraph explanations with code snippets.
+* **🎥 Automated YouTube Integration:** Automatically searches and embeds the most relevant YouTube tutorials for every single chapter.
+* **🔐 Authentication:** Secure user sign-up and login powered by Clerk.
+* **🖼️ Image Management:** Seamless course banner uploads and hosting managed through Cloudinary.
+* **📊 User Dashboard:** A dedicated space for users to view, manage, and delete their generated courses.
+* **⚡ Blazing Fast:** Built on Next.js 16 with Turbopack, utilizing Server Actions for highly optimized, secure database operations.
+
+---
+
+## 🛠️ Tech Stack & Dependencies
+
+**Frontend:**
+* [Next.js 16](https://nextjs.org/) (App Router, Turbopack)
+* [React 18](https://react.dev/)
+* [Tailwind CSS](https://tailwindcss.com/) (Styling)
+* [React Icons](https://react-icons.github.io/react-icons/) (UI Icons)
+* [React YouTube](https://www.npmjs.com/package/react-youtube) (Video Embedding)
+
+**Backend & Database:**
+* [Next.js Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations) (API layer)
+* [Drizzle ORM](https://orm.drizzle.team/) (Type-safe database interactions)
+* PostgreSQL (Database provider)
+
+**Third-Party APIs & Services:**
+* **Authentication:** [Clerk](https://clerk.com/)
+* **Image Hosting:** [Cloudinary](https://cloudinary.com/)
+* **Video Content:** [YouTube Data API v3](https://developers.google.com/youtube/v3)
+* **AI Generation:** Google Gemini / OpenAI (LLM Provider)
+
+---
+
+## ⚙️ Getting Started
+
+Follow these steps to set up the project locally on your machine.
+
+### Prerequisites
+Make sure you have the following installed:
+* [Node.js](https://nodejs.org/) (v18.17.0 or higher)
+* npm, yarn, or pnpm
+
+### 1. Clone the repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/your-username/ai-course-builder.git
+cd ai-course-builder
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### 2. Install Dependencies
+```bash
+npm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
+### 3. Set up Environment Variables
+```bash
+# Database (PostgreSQL URL from Neon, Supabase, or local)
+NEXT_PUBLIC_DATABASE_URL=your_postgresql_connection_string
 
-To learn more about Next.js, take a look at the following resources:
+# Clerk Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+CLERK_SECRET_KEY=your_clerk_secret_key
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Cloudinary (For image uploads)
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+NEXT_PUBLIC_CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# YouTube Data API v3
+NEXT_PUBLIC_YOUTUBE_API_KEY=your_youtube_data_api_key
 
-## Deploy on Vercel
+# AI Provider (Gemini or OpenAI)
+NEXT_PUBLIC_AI_API_KEY=your_ai_provider_api_key
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 4. Database Setup and Migrations
+```bash
+# Generate migrations
+npm run db:generate
+
+# Push migrations to your database
+npm run db:push
+```
+
+
+### 5. Run the Development Server
+```bash
+npm run dev
+```
+---
+
+## 📂 Project Structure Overview
+
+```bash
+├── app/                  # Next.js App Router pages and layouts
+│   ├── dashboard/        # User dashboard and course listings
+│   ├── create-course/    # Multi-step course generation flow
+│   ├── course/           # Dynamic routes for viewing generated courses
+│   └── api/              # API Routes (if applicable)
+├── configs/              # Global configurations
+│   ├── db.js             # Drizzle database connection instance
+│   ├── schema.js         # PostgreSQL table schemas (CourseList, Chapters)
+│   └── action.js         # Next.js Server Actions (Database CRUD operations)
+├── public/               # Static assets (Placeholders, logos)
+├── next.config.mjs       # Next.js & Turbopack configurations
+└── tailwind.config.js    # Tailwind CSS configuration
+```
+
+
