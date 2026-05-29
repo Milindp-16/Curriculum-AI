@@ -45,6 +45,7 @@ const CourseLayout = ({params}) => {
         setIsGenerating(true);
 
         try {
+            let allSuccess = true;
             for (let index = 0; index < chapters.length; index++) {
                 
                 const chapter = chapters[index];
@@ -69,40 +70,59 @@ const CourseLayout = ({params}) => {
 
                 console.log(`Generating content for chapter: ${chapter?.["Chapter Name"]}...`);
 
-                //Get Youtube Video
-                let videoId = '';
-                try {
-                    const resp = await service.getVideos(`${courseTopic} ${chapterName}`);
-                    videoId = resp[0]?.id?.videoId || '';
-                } catch (ytError) {
-                    console.error(`Failed to fetch YouTube video for ${chapterName}`, ytError);
+                let chapterSuccess = false;
+
+                // Try generating chapter content with one retry (2 attempts total)
+                for (let attempt = 1; attempt <= 2; attempt++) {
+                    try {
+                        //Get Youtube Video
+                        let videoId = '';
+                        try {
+                            const resp = await service.getVideos(`${courseTopic} ${chapterName}`);
+                            videoId = resp[0]?.id?.videoId || '';
+                        } catch (ytError) {
+                            console.error(`Failed to fetch YouTube video for ${chapterName}`, ytError);
+                        }
+
+                        // 1. Call the AI Model
+                        const aiResult = await generateChapterContentAI(PROMPT);
+                        
+
+                        const payload = {
+                            courseId: courseId,
+                            chapterId: index, 
+                            content: aiResult,
+                            videoId: videoId
+                        };
+
+                        await saveChapterContentToDb(payload);
+                        console.log(`Successfully saved Chapter ${index} to database!`);
+                        chapterSuccess = true;
+                        break; // Break retry loop on success
+                    } catch (err) {
+                        console.error(`Attempt ${attempt} failed for chapter ${index}:`, err);
+                    }
                 }
-
-                // 1. Call the AI Model
-                const aiResult = await generateChapterContentAI(PROMPT);
                 
+                if (!chapterSuccess) {
+                    allSuccess = false;
+                    break; // Stop further processing if all retries fail
+                }
+            }
 
-                const payload = {
-                    courseId: courseId,
-                    chapterId: index, 
-                    content: aiResult,
-                    videoId: videoId
-                };
-
-                await saveChapterContentToDb(payload);
-                console.log(`Successfully saved Chapter ${index} to database!`);
-
+            if (allSuccess) {
                 await publishCourse(courseInfo?.courseId);
                 router.replace('/create-course/'+courseInfo?.courseId+'/finish');
-                
+            } else {
+                alert("AI Model is on high demand. Please try again later.");
             }
+
         } catch (error) {
             console.error("Failed to generate course content:", error);
+            alert("AI Model is on high demand. Please try again later.");
         } finally {
             setIsGenerating(false);
         }
-
-        
     }
 
   return (

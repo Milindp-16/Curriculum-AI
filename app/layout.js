@@ -1,6 +1,6 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ClerkProvider, SignInButton, SignUpButton, SignedIn, SignedOut, UserButton, Show } from "@clerk/nextjs";
+import { ClerkProvider, SignInButton, SignUpButton, UserButton, Show } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 
 const inter = Inter({

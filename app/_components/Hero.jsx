@@ -3,8 +3,11 @@ import React from 'react'
 import Link from 'next/link'
 import { HiOutlineSparkles, HiOutlineAcademicCap, HiOutlinePlayCircle } from "react-icons/hi2"
 import Image from 'next/image'
+import { UserButton, useAuth } from '@clerk/nextjs'
 
 const Hero = () => {
+  const { isSignedIn } = useAuth();
+
   return (
     <>
       {/* Hero Section */}
@@ -164,9 +167,13 @@ const Hero = () => {
       <footer className="bg-[#121212] border-t border-white/10 py-8 px-6">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-[#B3B3B3] font-medium">© 2026 Curriculum AI. Built with Next.js, Gemini & ❤️</p>
-          <div className="flex gap-6">
+          <div className="flex gap-6 items-center">
             <Link href="/dashboard" className="text-sm text-[#B3B3B3] font-bold hover:text-white transition-colors no-underline">Dashboard</Link>
-            <Link href="/sign-in" className="text-sm text-[#B3B3B3] font-bold hover:text-white transition-colors no-underline">Log in</Link>
+            {!isSignedIn ? (
+              <Link href="/sign-in" className="text-sm text-[#B3B3B3] font-bold hover:text-white transition-colors no-underline">Log in</Link>
+            ) : (
+              <UserButton />
+            )}
           </div>
         </div>
       </footer>
