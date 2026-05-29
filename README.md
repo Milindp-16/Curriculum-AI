@@ -188,3 +188,5 @@ Open [http://localhost:3000](http://localhost:3000) to see the app.
 ## 📄 License
 
 This project is open source and available under the [MIT License](LICENSE).
+#   C u r r i c u l u m - A I  
+ 
