@@ -1,43 +1,47 @@
 # 🎓 Curriculum AI
 
-**Curriculum AI** is a powerful, full-stack AI-powered course builder that transforms any topic into a complete, structured learning experience. Enter a subject and watch as AI generates a detailed curriculum, chapter-by-chapter explanations with code examples, and automatically embeds the most relevant YouTube tutorials — all in minutes.
+> **Transform any topic into a complete, structured learning experience — powered by AI.**
 
-Built with a premium dark UI inspired by **Spotify** and **HackerRank**, Curriculum AI delivers an immersive, modern experience from start to finish.
+Curriculum AI is a full-stack AI-powered course builder. Enter a subject and watch as AI generates a detailed curriculum, chapter-by-chapter explanations with code examples, and automatically embeds the most relevant YouTube tutorials — all in minutes.
+
+Built with a premium dark UI inspired by **Spotify** and **HackerRank**, Curriculum AI delivers an immersive, modern learning experience from start to finish.
 
 ---
 
 ## ✨ Key Features
 
-- **🪄 AI-Powered Course Generation** — Input a topic, and Google Gemini AI creates a structured syllabus with chapters, descriptions, and estimated durations.
-- **🎥 Automated YouTube Integration** — Every chapter is enriched with the most relevant YouTube tutorial, fetched automatically via the YouTube Data API v3.
-- **📝 Inline Chapter Editing** — Edit chapter names, descriptions, and course titles directly from the UI using optimistic updates.
-- **🖼️ Custom Course Banners** — Upload and manage course images via Cloudinary with a seamless drag-and-drop experience.
-- **📊 Interactive Dashboard** — View, manage, and delete your generated courses from a sleek, dark-themed dashboard.
-- **✅ Chapter Progress Tracking** — Mark chapters as completed and track your progression via a real-time, animated Spotify-green progress bar. Built with full-stack server actions and Drizzle ORM.
-- **📄 Export to Markdown** — Download your entire course for offline viewing. Instantly compiles explanations and code blocks into a `.md` file utilizing native browser Blob APIs.
-- **🌍 Explore Community Courses** — Browse courses created by other users with paginated explore functionality.
-- **🔐 Secure Authentication** — Sign up, sign in, and manage sessions powered by Clerk.
-- **💎 Upgrade Plans** — Three-tier pricing page (Weekly ₹99, Monthly ₹499, Yearly ₹1,999) for premium access.
-- **🚀 Blazing Fast** — Built on Next.js 16 with Turbopack and Server Actions for highly optimized, secure database operations.
+- 🪄 **AI-Powered Course Generation** — Input a topic, and Google Gemini AI creates a structured syllabus with chapters, descriptions, and estimated durations.
+- 🎥 **Automated YouTube Integration** — Every chapter is enriched with the most relevant YouTube tutorial, fetched automatically via the YouTube Data API v3.
+- 📝 **Inline Chapter Editing** — Edit chapter names, descriptions, and course titles directly from the UI using optimistic updates.
+- 🖼️ **Custom Course Banners** — Upload and manage course images via Cloudinary with a seamless drag-and-drop experience.
+- 📊 **Interactive Dashboard** — View, manage, and delete your generated courses from a sleek, dark-themed dashboard.
+- ✅ **Chapter Progress Tracking** — Mark chapters as completed and track your progression via a real-time, animated Spotify-green progress bar. Built with full-stack server actions and Drizzle ORM.
+- 📄 **Export to Markdown** — Download your entire course for offline viewing. Instantly compiles explanations and code blocks into a `.md` file utilizing native browser Blob APIs.
+- 🌍 **Explore Community Courses** — Browse courses created by other users with paginated explore functionality.
+- 🔐 **Secure Authentication** — Sign up, sign in, and manage sessions powered by Clerk.
+- 💎 **Upgrade Plans** — Three-tier pricing page (Weekly ₹99 / Monthly ₹499 / Yearly ₹1,999) for premium access.
+- 🚀 **Blazing Fast** — Built on Next.js 16 with Turbopack and Server Actions for highly optimized, secure database operations.
 
 ---
 
 ## 🎨 Design & UX
 
 Curriculum AI features a **premium dark theme** with:
+
 - Glassmorphism cards with subtle borders and backdrop blur
 - Violet-cyan gradient accents and animated elements
 - Micro-animations (fade-in, hover-lift, shimmer skeletons)
 - Spotify-style sidebar navigation with active indicators
 - HackerRank-inspired chapter progression and code display
 - Custom CSS text-gradient logo (no image dependencies)
-- Responsive design from mobile to desktop
+- Fully responsive design from mobile to desktop
 
 ---
 
-## 🛠️ Tech Stack & Dependencies
+## 🛠️ Tech Stack
 
 ### Frontend
+
 | Technology | Purpose |
 |---|---|
 | [Next.js 16](https://nextjs.org/) | App Router, Turbopack, Server Actions |
@@ -48,6 +52,7 @@ Curriculum AI features a **premium dark theme** with:
 | [React YouTube](https://www.npmjs.com/package/react-youtube) | YouTube video embedding |
 
 ### Backend & Database
+
 | Technology | Purpose |
 |---|---|
 | [Next.js Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations) | Secure API layer (no REST routes) |
@@ -55,38 +60,49 @@ Curriculum AI features a **premium dark theme** with:
 | [Neon PostgreSQL](https://neon.tech/) | Serverless database provider |
 
 ### Third-Party APIs & Services
+
 | Service | Purpose |
 |---|---|
 | [Clerk](https://clerk.com/) | Authentication & user management |
-| [Google Gemini AI](https://ai.google.dev/) | Course content generation (gemini-3-flash) |
+| [Google Gemini AI](https://ai.google.dev/) | Course content generation (`gemini-2.0-flash`) |
 | [YouTube Data API v3](https://developers.google.com/youtube/v3) | Video search & embedding |
 | [Cloudinary](https://cloudinary.com/) | Course banner image hosting |
 
 ### Major Dependencies
-```
-@clerk/nextjs ^7.3.7       @google/genai ^2.6.0
-drizzle-orm ^0.45.2         @neondatabase/serverless ^1.1.0
-next ^16.2.6                react ^19.2.4
-tailwindcss ^4.3.0          react-youtube ^10.1.0
-next-cloudinary ^6.17.5     axios ^1.16.1
+
+```text
+@clerk/nextjs          ^7.3.7
+@google/genai          ^2.6.0
+drizzle-orm            ^0.45.2
+@neondatabase/serverless ^1.1.0
+next                   ^16.2.6
+react                  ^19.2.4
+tailwindcss            ^4.3.0
+react-youtube          ^10.1.0
+next-cloudinary        ^6.17.5
+axios                  ^1.16.1
 ```
 
 ---
 
-## ⚙️ Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
-- **Node.js** v18.17.0 or higher
-- **npm**, yarn, or pnpm
-- A PostgreSQL database (recommend [Neon](https://neon.tech/))
+
+- Node.js 18+
+- npm or yarn
+- A PostgreSQL database (Neon, Supabase, or local)
+- API keys for Clerk, Cloudinary, YouTube Data API v3, and Google Gemini AI
 
 ### 1. Clone the Repository
+
 ```bash
-git clone https://github.com/your-username/ai-course-builder.git
-cd ai-course-builder
+git clone https://github.com/your-username/curriculum-ai.git
+cd curriculum-ai
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 npm install
 ```
@@ -127,19 +143,20 @@ NEXT_PUBLIC_YOUTUBE_API_KEY=AIzaSy...
 # ──────────────────────────────────────────────
 # GOOGLE GEMINI AI
 # Get key from https://aistudio.google.com
+# Note: No NEXT_PUBLIC_ prefix — server-only for security
 # ──────────────────────────────────────────────
 GEMINI_API_KEY=AIzaSy...
 ```
 
-> **Note**: The `GEMINI_API_KEY` is server-only (no `NEXT_PUBLIC_` prefix) for security.
-
 ### 4. Database Setup & Migrations
+
 ```bash
-# Generate migration files from your schema
+# Push your schema to the database
 npm run db:push
 ```
 
 ### 5. Run the Development Server
+
 ```bash
 npm run dev
 ```
@@ -158,7 +175,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the app.
 │   ├── _components/          # Shared components (Logo, Header, Hero)
 │   ├── _context/             # React Context providers
 │   ├── _shared/              # Shared data (CategoryList)
-│   ├── course/[courseId]/     # Public course viewer
+│   ├── course/[courseId]/    # Public course viewer
 │   │   └── start/            # Interactive chapter reader
 │   ├── create-course/        # Multi-step course creation flow
 │   │   └── [courseId]/       # Course layout editor & finish page
@@ -178,9 +195,9 @@ Open [http://localhost:3000](http://localhost:3000) to see the app.
 │   ├── schema.jsx            # PostgreSQL table schemas
 │   └── service.jsx           # YouTube API service
 │
-├── middleware.js              # Clerk route protection
-├── tailwind.config.js         # Tailwind CSS configuration
-└── next.config.mjs            # Next.js & Turbopack config
+├── middleware.js             # Clerk route protection
+├── tailwind.config.js        # Tailwind CSS configuration
+└── next.config.mjs           # Next.js & Turbopack config
 ```
 
 ---
@@ -188,5 +205,3 @@ Open [http://localhost:3000](http://localhost:3000) to see the app.
 ## 📄 License
 
 This project is open source and available under the [MIT License](LICENSE).
-#   C u r r i c u l u m - A I  
- 
