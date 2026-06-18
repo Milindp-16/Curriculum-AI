@@ -51,7 +51,7 @@ export async function saveCourseToDb(courseData) {
         await initializeGlobalSearchIndex();
         const semanticText = `Category: ${courseData.category}. Title: ${courseData.name}. Level: ${courseData.level}`;
         const embedResponse = await ai.models.embedContent({
-            model: 'text-embedding-004',
+            model: 'embedding-001',
             contents: semanticText,
         });
 
@@ -280,7 +280,7 @@ export async function searchGlobalCourses(userQuery) {
         await initializeGlobalSearchIndex();
 
         const embedResponse = await ai.models.embedContent({
-            model: 'text-embedding-004',
+            model: 'embedding-001',
             contents: userQuery,
         });
         
