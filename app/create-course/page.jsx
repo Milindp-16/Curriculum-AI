@@ -80,7 +80,7 @@ const CreateCourse = () => {
         console.log(FINAL_PROMPT);
 
         try {
-            const result = await generateCourseLayout(FINAL_PROMPT);
+            const result = await generateCourseLayout(FINAL_PROMPT,USER_INPUT_PROMPT);
             console.log(result);        
             SaveCourseLayoutInDb(result);
         } catch (error) {

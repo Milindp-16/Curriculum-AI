@@ -1,6 +1,9 @@
 "use server"; 
 
+import redis from '@/lib/redis';
+import { currentUser } from '@clerk/nextjs/server';
 import { GoogleGenAI } from '@google/genai';
+import { v4 as uuidv4 } from 'uuid';
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -13,7 +16,90 @@ const config = {
   responseMimeType: "application/json", 
 };
 
-export async function generateCourseLayout(finalPrompt) {
+//converts normal JS array into binary buffer array
+function float32Buffer(arr){
+  return Buffer.from(new Float32Array(arr).buffer);
+}
+
+async function initializeVectorIndex() {
+  try {
+    // Creates an index named 'idx:courses' looking at keys starting with 'course_cache:'
+    await redis.call(
+      'FT.CREATE', 'idx:courses', 'ON', 'JSON', 'PREFIX', '1', 'course_cache:',
+      'SCHEMA', 
+      '$.embedding', 'AS', 'embedding', 'VECTOR', 'FLAT', '6', 
+      'TYPE', 'FLOAT32', 'DIM', '768', 'DISTANCE_METRIC', 'COSINE'
+    );
+  } catch (error) {
+    if (!error.message.includes('Index already exists')) {
+      console.error("Redis Index Error:", error);
+    }
+  }
+}
+
+export async function generateCourseLayout(finalPrompt,userInputPrompt) {
+
+  const user = await currentUser();
+  if(!user) throw new Error("Unauthorized: You must be logged in to generate a course.");
+
+
+  /*
+  ==============================================================================
+  Rate Limiting
+  ==============================================================================
+  */
+
+  const userEmail = user?.primaryEmailAddress?.emailAddress;
+  const limitKey = `rate_limit:generate:${userEmail}`;
+  const maxRequests = 5;
+  const currentReqCnt = await redis.incr(limitKey);
+
+  if(currentReqCnt == 1){
+    await redis.expire(limitKey,60);
+  }
+  if(currentReqCnt > maxRequests)throw new Error("Rate limit exceeded. Please wait a minute before generating more courses.");
+
+
+  /*
+  ==============================================================================
+  Semantic Caching
+  ==============================================================================
+  */
+
+  await initializeVectorIndex();
+
+  const embedResponse = await ai.models.embedContent({
+    model: 'text-embedding-004',
+    contents: userInputPrompt,
+  })
+  //relatively large and unstructured and string parsing is slow
+  const vectorArray = embedResponse.embeddings[0].values;
+
+  const vectorBuffer = float32Buffer(vectorArray);
+
+  //perform KNN
+  try {
+    // Search for the 1 closest vector. Return its score (distance) and the JSON payload.
+    const searchResult = await redis.call(
+      'FT.SEARCH', 'idx:courses', 
+      '*=>[KNN 1 @embedding $vec AS distance]', 
+      'PARAMS', '2', 'vec', vectorBuffer, 
+      'RETURN', '2', 'distance', '$.payload', 
+      'DIALECT', '2'
+    );
+    if(searchResult[0] > 0){
+      const distance = parseFloat(searchResult[2][1]);
+      const cachedPayload = JSON.parse(searchResult[2][3]);
+
+      if(distance<0.15){
+        return cachedPayload;
+      }
+    }
+  } catch (error) {
+    console.log("Vector search failed or index empty, proceeding to AI:", error.message);
+  }
+
+
   const historyTemplate = [
     {
       role: "user",
@@ -55,13 +141,23 @@ export async function generateCourseLayout(finalPrompt) {
       message: finalPrompt,
     });
 
-    // Failsafe: Ensure we actually got text back from the model
-    if (!response.text) {
-        throw new Error("The AI returned an empty response.");
-    }
+    if (!response.text)throw new Error("The AI returned an empty response.");
 
     const cleanJsonText = response.text.replace(/```json/gi, '').replace(/```/g, '').trim();
-    return JSON.parse(cleanJsonText);
+    const finalData = JSON.parse(cleanJsonText);
+
+    const uniqueId = uuidv4();
+    const cacheKey = `course_cache:${uniqueId}`;
+    const redisDocument = {
+      embedding: vectorArray, // The math representation
+      payload: finalData      // The actual course JSON
+    };
+
+    await redis.call('JSON.SET', cacheKey, '$', JSON.stringify(redisDocument));
+    await redis.expire(cacheKey, 604800);
+
+
+    return finalData;
     
   } catch (error) {
     // LOG THE ACTUAL ERROR TO YOUR SERVER TERMINAL

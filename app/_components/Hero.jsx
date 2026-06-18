@@ -166,7 +166,7 @@ const Hero = () => {
       {/* Footer */}
       <footer className="bg-[#121212] border-t border-white/10 py-8 px-6">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-[#B3B3B3] font-medium">© 2026 Curriculum AI. Built with Next.js, Gemini & ❤️</p>
+          <p className="text-sm text-[#B3B3B3] font-medium">Curriculum-AI - trusted by students</p>
           <div className="flex gap-6 items-center">
             <Link href="/dashboard" className="text-sm text-[#B3B3B3] font-bold hover:text-white transition-colors no-underline">Dashboard</Link>
             {!isSignedIn ? (

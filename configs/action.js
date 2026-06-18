@@ -1,8 +1,35 @@
 "use server"; 
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from './db';
 import { Chapters, CourseList } from './schema';
+import redis from '../lib/redis';
+import { currentUser } from '@clerk/nextjs/server';
+import { GoogleGenAI } from '@google/genai';
 
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+function float32Buffer(arr) {
+    return Buffer.from(new Float32Array(arr).buffer);
+}
+
+// Helper: Create the permanent Global Search Index
+async function initializeGlobalSearchIndex() {
+    try {
+        await redis.call(
+            'FT.CREATE', 'idx:global_search', 'ON', 'JSON', 'PREFIX', '1', 'searchable_course:',
+            'SCHEMA', 
+            '$.embedding', 'AS', 'embedding', 'VECTOR', 'FLAT', '6', 
+            'TYPE', 'FLOAT32', 'DIM', '768', 'DISTANCE_METRIC', 'COSINE'
+        );
+    } catch (error) {
+        if (!error.message.includes('Index already exists')) {
+            console.error("Redis Index Error:", error);
+        }
+    }
+}
+
+//cache invalidation
 export async function saveCourseToDb(courseData) {
     console.log("DATA RECEIVED FROM FRONTEND:", courseData);
     try {
@@ -17,6 +44,26 @@ export async function saveCourseToDb(courseData) {
             userProfileImage: courseData.userProfileImage
         }).returning(); 
         
+        const cacheKey = `user_courses_dashboard:${courseData.createdBy}`;
+        await redis.del(cacheKey);
+
+
+        await initializeGlobalSearchIndex();
+        const semanticText = `Category: ${courseData.category}. Title: ${courseData.name}. Level: ${courseData.level}`;
+        const embedResponse = await ai.models.embedContent({
+            model: 'text-embedding-004',
+            contents: semanticText,
+        });
+
+        const vectorArray = embedResponse.embeddings[0].values;
+        const vectorBuffer = float32Buffer(vectorArray);
+
+        const searchDocKey = `searchable_course:${courseData.courseId}`;
+        const searchDocument = {
+            courseId: courseData.courseId,
+            embedding: vectorBuffer,
+        }
+        await redis.call('JSON.SET', searchDocKey, '$', JSON.stringify(searchDocument));
         return result;
     } catch (error) {
         console.error("Database insertion failed:", error);
@@ -125,14 +172,23 @@ export const publishCourse = async (courseId) => {
     }
 }
 
+
+//read through caching
 export async function getUserCourses(userEmail) {
+    const cacheKey = `user_courses_dashboard:${userEmail}`;
     try {
+        const cachedDashboard = await redis.get(cacheKey);
+        if (cachedDashboard) {
+            return JSON.parse(cachedDashboard);
+        }
         const result = await db
             .select()
             .from(CourseList)
             .where(eq(CourseList.createdBy, userEmail)) 
             .orderBy(desc(CourseList.id)); 
             
+        
+        await redis.set(cacheKey, JSON.stringify(result), 'EX', 3600);
         return result; 
         
     } catch (error) {
@@ -142,6 +198,8 @@ export async function getUserCourses(userEmail) {
 }
 
 export const deleteCourse = async (courseId) => {
+    const user = await currentUser();
+    const userEmail = user?.primaryEmailAddress?.emailAddress;
     try {
         await db.delete(Chapters)
             .where(eq(Chapters.courseId, courseId));
@@ -150,9 +208,11 @@ export const deleteCourse = async (courseId) => {
             .where(eq(CourseList.courseId, courseId))
             .returning();
             
-        // 3. Clear the cache for the dashboard so it fetches fresh data next time
-        // revalidatePath("/dashboard"); 
-            
+        
+        if (userEmail) {
+            const cacheKey = `user_courses_dashboard:${userEmail}`;
+            await redis.del(cacheKey);
+        }
         return result;
     } catch (error) {
         console.error("Database Error: Failed to delete course", error);
@@ -211,5 +271,46 @@ export const exploreCourses = async (pageIndex) => {
     } catch (error) {
         console.error("Database Error: Failed to fetch all courses", error);
         throw new Error("Failed to fetch explore courses");
+    }
+}
+
+
+export const searchGlobalCourses = async (userQuery) => {
+    try {
+        await initializeGlobalSearchIndex();
+        const embedResponse = {
+            model: 'text-embedding-004',
+            contents: userQuery,
+        }
+        const vectorBuffer = float32Buffer(embedResponse.embedding[0].values);
+        //perform knn search
+        const searchResult = await redis.call(
+            'FT.SEARCH', 'idx:global_search', 
+            '*=>[KNN 6 @embedding $vec AS distance]', 
+            'PARAMS', '2', 'vec', vectorBuffer, 
+            'RETURN', '2', 'distance', '$.courseId', 
+            'DIALECT', '2'
+        );
+        const totalFound = searchResult[0];
+        if(totalFound === 0)return [];
+        //extracting course Id's of found courses
+        const matchingCourseIds = [];
+        // Redis returns an array like: [Total, Key1, [Fields], Key2, [Fields]...]
+        for (let i = 2; i < searchResult.length; i += 2) {
+            const fields = searchResult[i];
+            const distance = parseFloat(fields[1]);
+            const courseId = JSON.parse(fields[3]);
+            
+            // Only include results that are somewhat semantically related
+            if (distance < 0.4) {
+                matchingCourseIds.push(courseId);
+            }
+        }
+        if(matchingCourseIds.length === 0)return [];
+        const finalCourses = await db.select().from(CourseList).where(inArray(CourseList.courseId, matchingCourseIds));
+        return finalCourses;
+    } catch (error) {
+        console.error("Semantic Search Error:", error);
+        throw new Error("Failed to search courses.");
     }
 }
