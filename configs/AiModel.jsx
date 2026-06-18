@@ -69,7 +69,7 @@ export async function generateCourseLayout(finalPrompt,userInputPrompt) {
   await initializeVectorIndex();
 
   const embedResponse = await ai.models.embedContent({
-    model: 'embedding-001',
+    model: 'text-embedding-004',
     contents: userInputPrompt,
   })
   //relatively large and unstructured and string parsing is slow

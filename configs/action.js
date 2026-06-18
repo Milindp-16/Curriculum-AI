@@ -7,7 +7,10 @@ import { currentUser } from '@clerk/nextjs/server';
 import { GoogleGenAI } from '@google/genai';
 
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const ai = new GoogleGenAI({ 
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions: { apiVersion: 'v1' } 
+});
 
 function float32Buffer(arr) {
     return Buffer.from(new Float32Array(arr).buffer);
@@ -51,7 +54,7 @@ export async function saveCourseToDb(courseData) {
         await initializeGlobalSearchIndex();
         const semanticText = `Category: ${courseData.category}. Title: ${courseData.name}. Level: ${courseData.level}`;
         const embedResponse = await ai.models.embedContent({
-            model: 'embedding-001',
+            model: 'text-embedding-004',
             contents: semanticText,
         });
 
@@ -280,7 +283,7 @@ export async function searchGlobalCourses(userQuery) {
         await initializeGlobalSearchIndex();
 
         const embedResponse = await ai.models.embedContent({
-            model: 'embedding-001',
+            model: 'text-embedding-004',
             contents: userQuery,
         });
         
