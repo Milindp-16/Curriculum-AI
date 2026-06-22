@@ -1,5 +1,5 @@
 "use server"; 
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, or } from 'drizzle-orm';
 import { db } from './db';
 import { Chapters, CourseList } from './schema';
 import redis from '../lib/redis';
@@ -293,64 +293,117 @@ export const exploreCourses = async (pageIndex) => {
 }
 
 
+// SQL text-based fallback search (used when Redis vector index is empty or unavailable)
+async function sqlFallbackSearch(userQuery) {
+    const pattern = `%${userQuery}%`;
+    return db.select()
+        .from(CourseList)
+        .where(
+            or(
+                ilike(CourseList.name, pattern),
+                ilike(CourseList.category, pattern)
+            )
+        )
+        .orderBy(desc(CourseList.id))
+        .limit(9);
+}
+
 export async function searchGlobalCourses(userQuery) {
     try {
         await initializeGlobalSearchIndex();
 
-        const embedResponse = await ai.models.embedContent({
-            model: 'gemini-embedding-001',
-            contents: userQuery,
-        });
-        
-        const vectorArray = embedResponse.embeddings?.[0]?.values || embedResponse.embedding?.values;
-        
-        if (!vectorArray) {
-             console.error("Gemini Response:", embedResponse);
-             throw new Error("Gemini API did not return a valid vector array.");
-        }
-        
-        const vectorBuffer = float32Buffer(vectorArray);
-
-        // 2. Perform KNN Vector Search in Redis
-        const searchResult = await redis.call(
-            'FT.SEARCH', 'idx:global_search', 
-            '*=>[KNN 6 @embedding $vec AS distance]', 
-            'PARAMS', '2', 'vec', vectorBuffer, 
-            'RETURN', '2', 'distance', '$.courseId', 
-            'DIALECT', '2'
-        );
-
-        
-        if (!searchResult || typeof searchResult[0] === 'undefined') {
-            console.log("Redis returned an empty or invalid search result.");
-            return []; 
-        }
-
-        const totalFound = searchResult[0];
-        if (totalFound === 0) return []; 
-
-        
-        const matchingCourseIds = [];
-        for (let i = 2; i < searchResult.length; i += 2) {
-            const fields = searchResult[i];
-            const distance = parseFloat(fields[1]);
-            const courseId = JSON.parse(fields[3]);
+        // --- Step 1: Try vector (semantic) search ---
+        let vectorResults = [];
+        try {
+            const embedResponse = await ai.models.embedContent({
+                model: 'gemini-embedding-001',
+                contents: userQuery,
+            });
             
-            if (distance < 0.4) {
-                matchingCourseIds.push(courseId);
+            const vectorArray = embedResponse.embeddings?.[0]?.values || embedResponse.embedding?.values;
+            
+            if (vectorArray) {
+                const vectorBuffer = float32Buffer(vectorArray);
+
+                const searchResult = await redis.call(
+                    'FT.SEARCH', 'idx:global_search', 
+                    '*=>[KNN 6 @embedding $vec AS distance]', 
+                    'PARAMS', '2', 'vec', vectorBuffer, 
+                    'RETURN', '2', 'distance', '$.courseId', 
+                    'DIALECT', '2'
+                );
+
+                if (searchResult && searchResult[0] > 0) {
+                    const matchingCourseIds = [];
+                    for (let i = 2; i < searchResult.length; i += 2) {
+                        const fields = searchResult[i];
+                        const distance = parseFloat(fields[1]);
+                        const courseId = JSON.parse(fields[3]);
+                        
+                        if (distance < 0.4) {
+                            matchingCourseIds.push(courseId);
+                        }
+                    }
+
+                    if (matchingCourseIds.length > 0) {
+                        vectorResults = await db.select()
+                            .from(CourseList)
+                            .where(inArray(CourseList.courseId, matchingCourseIds));
+                    }
+                }
             }
+        } catch (vectorError) {
+            console.warn("Vector search failed, falling back to text search:", vectorError.message);
         }
 
-        if (matchingCourseIds.length === 0) return [];
+        // --- Step 2: If vector search found results, return them ---
+        if (vectorResults.length > 0) return vectorResults;
 
-        const finalCourses = await db.select()
-            .from(CourseList)
-            .where(inArray(CourseList.courseId, matchingCourseIds));
-
-        return finalCourses;
+        // --- Step 3: Fallback to SQL text search ---
+        console.log("Vector search returned 0 results, using SQL text fallback for:", userQuery);
+        return await sqlFallbackSearch(userQuery);
 
     } catch (error) {
         console.error("Semantic Search Error:", error);
         throw new Error("Failed to search courses.");
+    }
+}
+
+// Utility: Re-index all existing courses into the Redis search index.
+// Call this once after a migration to rebuild the search index from the database.
+export async function reindexAllCourses() {
+    try {
+        await initializeGlobalSearchIndex();
+
+        const allCourses = await db.select().from(CourseList);
+        let indexed = 0;
+
+        for (const course of allCourses) {
+            try {
+                const semanticText = `Category: ${course.category}. Title: ${course.name}. Level: ${course.level}`;
+                const embedResponse = await ai.models.embedContent({
+                    model: 'gemini-embedding-001',
+                    contents: semanticText,
+                });
+
+                const vectorArray = embedResponse.embeddings?.[0]?.values;
+                if (!vectorArray) continue;
+
+                const searchDocKey = `searchable_course:${course.courseId}`;
+                const searchDocument = {
+                    courseId: course.courseId,
+                    embedding: Array.from(vectorArray),
+                };
+                await redis.call('JSON.SET', searchDocKey, '$', JSON.stringify(searchDocument));
+                indexed++;
+            } catch (courseError) {
+                console.error(`Failed to index course ${course.courseId}:`, courseError.message);
+            }
+        }
+
+        return { total: allCourses.length, indexed };
+    } catch (error) {
+        console.error("Re-indexing failed:", error);
+        throw new Error("Failed to re-index courses.");
     }
 }
