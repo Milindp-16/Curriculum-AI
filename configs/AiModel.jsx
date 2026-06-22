@@ -21,15 +21,28 @@ function float32Buffer(arr){
   return Buffer.from(new Float32Array(arr).buffer);
 }
 
+// Uses a version flag in Redis to detect when the index schema changes (e.g. DIM migration)
+const CACHE_INDEX_VERSION = 'v2_3072';
 async function initializeVectorIndex() {
   try {
+    const currentVersion = await redis.get('idx:courses:version');
+    if (currentVersion === CACHE_INDEX_VERSION) return; // Index is up-to-date
+
+    // Drop old index if it exists (e.g. from the old 768-dim text-embedding-004 model)
+    try { await redis.call('FT.DROPINDEX', 'idx:courses'); } catch (_) { /* ignore if not found */ }
+
+    // Purge old 768-dim cached course documents since they're incompatible
+    const oldKeys = await redis.keys('course_cache:*');
+    if (oldKeys.length > 0) await redis.del(...oldKeys);
+
     // Creates an index named 'idx:courses' looking at keys starting with 'course_cache:'
     await redis.call(
       'FT.CREATE', 'idx:courses', 'ON', 'JSON', 'PREFIX', '1', 'course_cache:',
       'SCHEMA', 
       '$.embedding', 'AS', 'embedding', 'VECTOR', 'FLAT', '6', 
-      'TYPE', 'FLOAT32', 'DIM', '768', 'DISTANCE_METRIC', 'COSINE'
+      'TYPE', 'FLOAT32', 'DIM', '3072', 'DISTANCE_METRIC', 'COSINE'
     );
+    await redis.set('idx:courses:version', CACHE_INDEX_VERSION);
   } catch (error) {
     if (!error.message.includes('Index already exists')) {
       console.error("Redis Index Error:", error);
@@ -69,7 +82,7 @@ export async function generateCourseLayout(finalPrompt,userInputPrompt) {
   await initializeVectorIndex();
 
   const embedResponse = await ai.models.embedContent({
-    model: 'text-embedding-004',
+    model: 'gemini-embedding-001',
     contents: userInputPrompt,
   })
   //relatively large and unstructured and string parsing is slow

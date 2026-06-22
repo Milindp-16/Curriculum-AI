@@ -9,7 +9,6 @@ import { GoogleGenAI } from '@google/genai';
 
 const ai = new GoogleGenAI({ 
   apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: { apiVersion: 'v1' } 
 });
 
 function float32Buffer(arr) {
@@ -17,14 +16,27 @@ function float32Buffer(arr) {
 }
 
 // Helper: Create the permanent Global Search Index
+// Uses a version flag in Redis to detect when the index schema changes (e.g. DIM migration)
+const GLOBAL_INDEX_VERSION = 'v2_3072';
 async function initializeGlobalSearchIndex() {
     try {
+        const currentVersion = await redis.get('idx:global_search:version');
+        if (currentVersion === GLOBAL_INDEX_VERSION) return; // Index is up-to-date
+
+        // Drop old index if it exists (e.g. from the old 768-dim text-embedding-004 model)
+        try { await redis.call('FT.DROPINDEX', 'idx:global_search'); } catch (_) { /* ignore if not found */ }
+
+        // Also purge old 768-dim searchable_course documents since they're incompatible
+        const oldKeys = await redis.keys('searchable_course:*');
+        if (oldKeys.length > 0) await redis.del(...oldKeys);
+
         await redis.call(
             'FT.CREATE', 'idx:global_search', 'ON', 'JSON', 'PREFIX', '1', 'searchable_course:',
             'SCHEMA', 
             '$.embedding', 'AS', 'embedding', 'VECTOR', 'FLAT', '6', 
-            'TYPE', 'FLOAT32', 'DIM', '768', 'DISTANCE_METRIC', 'COSINE'
+            'TYPE', 'FLOAT32', 'DIM', '3072', 'DISTANCE_METRIC', 'COSINE'
         );
+        await redis.set('idx:global_search:version', GLOBAL_INDEX_VERSION);
     } catch (error) {
         if (!error.message.includes('Index already exists')) {
             console.error("Redis Index Error:", error);
@@ -54,17 +66,16 @@ export async function saveCourseToDb(courseData) {
         await initializeGlobalSearchIndex();
         const semanticText = `Category: ${courseData.category}. Title: ${courseData.name}. Level: ${courseData.level}`;
         const embedResponse = await ai.models.embedContent({
-            model: 'text-embedding-004',
+            model: 'gemini-embedding-001',
             contents: semanticText,
         });
 
         const vectorArray = embedResponse.embeddings[0].values;
-        const vectorBuffer = float32Buffer(vectorArray);
 
         const searchDocKey = `searchable_course:${courseData.courseId}`;
         const searchDocument = {
             courseId: courseData.courseId,
-            embedding: vectorBuffer,
+            embedding: Array.from(vectorArray), // Store raw float array for Redis JSON vector index
         }
         await redis.call('JSON.SET', searchDocKey, '$', JSON.stringify(searchDocument));
         return result;
@@ -216,6 +227,10 @@ export const deleteCourse = async (courseId) => {
             const cacheKey = `user_courses_dashboard:${userEmail}`;
             await redis.del(cacheKey);
         }
+
+        // Also remove the vector search document for this course
+        try { await redis.call('JSON.DEL', `searchable_course:${courseId}`); } catch (_) { /* ignore */ }
+
         return result;
     } catch (error) {
         console.error("Database Error: Failed to delete course", error);
@@ -283,7 +298,7 @@ export async function searchGlobalCourses(userQuery) {
         await initializeGlobalSearchIndex();
 
         const embedResponse = await ai.models.embedContent({
-            model: 'text-embedding-004',
+            model: 'gemini-embedding-001',
             contents: userQuery,
         });
         
