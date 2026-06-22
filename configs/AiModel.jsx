@@ -1,45 +1,52 @@
-"use server"; 
+"use server";
 
 import redis from '@/lib/redis';
 import { currentUser } from '@clerk/nextjs/server';
 import { GoogleGenAI } from '@google/genai';
 import { v4 as uuidv4 } from 'uuid';
 
+
+//intialize SDK client that communicates with the google gemini in JSON schema
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
 const config = {
   thinkingConfig: {
-    thinkingLevel: 'HIGH', 
+    thinkingLevel: 'HIGH',
   },
-  responseMimeType: "application/json", 
+  responseMimeType: "application/json",
 };
 
 //converts normal JS array into binary buffer array
-function float32Buffer(arr){
+function float32Buffer(arr) {
   return Buffer.from(new Float32Array(arr).buffer);
 }
 
-// Uses a version flag in Redis to detect when the index schema changes (e.g. DIM migration)
+// Uses a version flag in Redis to detect when the index schema changes
 const CACHE_INDEX_VERSION = 'v2_3072';
 async function initializeVectorIndex() {
   try {
+    //if the version doesnot matches the current version delete the old incompatible version 
+    // and create a new entry in the index -> deltes the entire search index first and then the outdated json in redis cloud
     const currentVersion = await redis.get('idx:courses:version');
     if (currentVersion === CACHE_INDEX_VERSION) return; // Index is up-to-date
 
-    // Drop old index if it exists (e.g. from the old 768-dim text-embedding-004 model)
+    // Drop old index if it exists
+    //since we have not passed the optional 'DD flag'(delete document) so the json object in the redis are still there
     try { await redis.call('FT.DROPINDEX', 'idx:courses'); } catch (_) { /* ignore if not found */ }
 
-    // Purge old 768-dim cached course documents since they're incompatible
-    const oldKeys = await redis.keys('course_cache:*');
+    // Delete old 768-dim cached course documents since they're incompatible because their $embedding is outdated
+    const oldKeys = await redis.keys('course_cache:*'); //every object whose key starts with course_cache and then wildcard matching is selected
     if (oldKeys.length > 0) await redis.del(...oldKeys);
 
-    // Creates an index named 'idx:courses' looking at keys starting with 'course_cache:'
+    //Initializes and creates an index named 'idx:courses' looking at keys starting with 'course_cache:' in the redis cloud 
+    // -> runs a background thread that constantly montiors and looks for prefix course_cache and if it finds it, 
+    // then it creates a entry of it in search index
     await redis.call(
       'FT.CREATE', 'idx:courses', 'ON', 'JSON', 'PREFIX', '1', 'course_cache:',
-      'SCHEMA', 
-      '$.embedding', 'AS', 'embedding', 'VECTOR', 'FLAT', '6', 
+      'SCHEMA',
+      '$.embedding', 'AS', 'embedding', 'VECTOR', 'FLAT', '6',
       'TYPE', 'FLOAT32', 'DIM', '3072', 'DISTANCE_METRIC', 'COSINE'
     );
     await redis.set('idx:courses:version', CACHE_INDEX_VERSION);
@@ -50,15 +57,16 @@ async function initializeVectorIndex() {
   }
 }
 
-export async function generateCourseLayout(finalPrompt,userInputPrompt) {
+export async function generateCourseLayout(finalPrompt, userInputPrompt) {
 
+  //find the current user
   const user = await currentUser();
-  if(!user) throw new Error("Unauthorized: You must be logged in to generate a course.");
 
+  if (!user) throw new Error("Unauthorized: You must be logged in to generate a course.");
 
   /*
   ==============================================================================
-  Rate Limiting
+  Achieved Rate Limiting
   ==============================================================================
   */
 
@@ -67,11 +75,10 @@ export async function generateCourseLayout(finalPrompt,userInputPrompt) {
   const maxRequests = 5;
   const currentReqCnt = await redis.incr(limitKey);
 
-  if(currentReqCnt == 1){
-    await redis.expire(limitKey,60);
+  if (currentReqCnt == 1) {
+    await redis.expire(limitKey, 60);
   }
-  if(currentReqCnt > maxRequests)throw new Error("Rate limit exceeded. Please wait a minute before generating more courses.");
-
+  if (currentReqCnt > maxRequests) throw new Error("Rate limit exceeded. Please wait a minute before generating more courses.");
 
   /*
   ==============================================================================
@@ -94,17 +101,18 @@ export async function generateCourseLayout(finalPrompt,userInputPrompt) {
   try {
     // Search for the 1 closest vector. Return its score (distance) and the JSON payload.
     const searchResult = await redis.call(
-      'FT.SEARCH', 'idx:courses', 
-      '*=>[KNN 1 @embedding $vec AS distance]', 
-      'PARAMS', '2', 'vec', vectorBuffer, 
-      'RETURN', '2', 'distance', '$.payload', 
+      'FT.SEARCH', 'idx:courses',
+      '*=>[KNN 1 @embedding $vec AS distance]',
+      'PARAMS', '2', 'vec', vectorBuffer,
+      'RETURN', '2', 'distance', '$.payload',
       'DIALECT', '2'
     );
-    if(searchResult[0] > 0){
+    if (searchResult[0] > 0) {
       const distance = parseFloat(searchResult[2][1]);
       const cachedPayload = JSON.parse(searchResult[2][3]);
 
-      if(distance<0.15){
+      if (distance < 0.15) {
+        //cache hit
         return cachedPayload;
       }
     }
@@ -112,7 +120,7 @@ export async function generateCourseLayout(finalPrompt,userInputPrompt) {
     console.log("Vector search failed or index empty, proceeding to AI:", error.message);
   }
 
-
+  //cache miss - fetch the course layout from the api (expensive operation)
   const historyTemplate = [
     {
       role: "user",
@@ -121,7 +129,7 @@ export async function generateCourseLayout(finalPrompt,userInputPrompt) {
     {
       role: "model",
       parts: [
-        { 
+        {
           text: JSON.stringify({
             courseName: "Course Title Example",
             description: "Detailed description of the course content.",
@@ -147,14 +155,14 @@ export async function generateCourseLayout(finalPrompt,userInputPrompt) {
     const chat = ai.chats.create({
       model: 'gemini-3-flash-preview',
       config: config,
-      history: historyTemplate, 
+      history: historyTemplate,
     });
 
     const response = await chat.sendMessage({
       message: finalPrompt,
     });
 
-    if (!response.text)throw new Error("The AI returned an empty response.");
+    if (!response.text) throw new Error("The AI returned an empty response.");
 
     const cleanJsonText = response.text.replace(/```json/gi, '').replace(/```/g, '').trim();
     const finalData = JSON.parse(cleanJsonText);
@@ -171,12 +179,9 @@ export async function generateCourseLayout(finalPrompt,userInputPrompt) {
 
 
     return finalData;
-    
+
   } catch (error) {
-    // LOG THE ACTUAL ERROR TO YOUR SERVER TERMINAL
     console.error("=== REAL BACKEND ERROR ===", error);
-    
-    // Pass the real error message to the frontend so you know what went wrong
     throw new Error(error.message || "Failed to generate course schema");
   }
 }
@@ -194,9 +199,9 @@ export async function generateChapterContentAI(prompt) {
       throw new Error("The AI returned an empty response.");
     }
 
-    // Failsafe: Clean up any markdown formatting just in case the AI ignores the schema
+    //Clean up any markdown formatting just in case the AI ignores the schema
     const cleanJsonText = response.text.replace(/```json/gi, '').replace(/```/g, '').trim();
-    
+
     return JSON.parse(cleanJsonText);
 
   } catch (error) {

@@ -5,38 +5,38 @@ import ChapterListCard from './_component/ChapterListCard';
 import ChapterContent from './_component/ChapterContent';
 import { HiOutlineDocumentDownload } from 'react-icons/hi';
 
-function CourseStart({params}) {
+function CourseStart({ params }) {
     const unwrappedParams = use(params);
     const courseId = unwrappedParams?.courseId;
-    
+
     const [courseInfo, setCourseInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [selectedChapter, setSelectedChapter] = useState(null);
     const [chapterContent, setChapterContent] = useState();
     const [dbChapters, setDbChapters] = useState([]);
-    
+
     useEffect(() => {
         const GetCourse = async () => {
-            if(!courseId) return;
+            if (!courseId) return;
             setLoading(true);
             try {
                 const res = await getCourseById(courseId);
                 setCourseInfo(res);
-                
+
                 const chaptersRes = await getChaptersByCourseId(courseId);
                 setDbChapters(chaptersRes);
-                
+
                 if (res?.courseOutput?.Chapters?.length > 0) {
                     setSelectedChapter(res.courseOutput.Chapters[0]);
                     GetSelectedChapterContent(0);
                 }
-            } catch(error) {
+            } catch (error) {
                 console.log('Unable to fetch the course: ', error);
             } finally {
                 setLoading(false);
             }
         }
-    
+
         GetCourse();
     }, [courseId]);
 
@@ -45,9 +45,9 @@ function CourseStart({params}) {
             const res = await getChapterData(courseId, index);
             console.log(res);
             setChapterContent(res);
-        } catch(error) {
+        } catch (error) {
             console.error("Failed to fetch chapter:", error);
-        } 
+        }
     }
 
     const downloadCourseAsMarkdown = () => {
@@ -83,75 +83,78 @@ function CourseStart({params}) {
         URL.revokeObjectURL(url);
     };
 
-  return (
-    <div className='flex min-h-screen bg-background'>
-        
-        {/* Sidebar */}
-        <div className='md:w-72 hidden md:block h-screen fixed border-r border-border/50 bg-[#0d0d14] z-10'>
-            <div className='p-4 border-b border-border/50'>
-                <h2 className='font-semibold text-sm text-white leading-snug line-clamp-2'>
-                    {courseInfo?.courseOutput?.["Course Name"]}
-                </h2>
-                <div className='flex items-center justify-between mt-3'>
-                    <p className='text-xs text-[#B3B3B3]'>
-                        {courseInfo?.courseOutput?.Chapters?.filter((_, idx) => dbChapters.find(c => c.chapterId == String(idx))?.completed).length || 0} / {courseInfo?.courseOutput?.Chapters?.length || 0} completed
-                    </p>
-                    <p className='text-xs font-bold text-[#1DB954]'>
-                        {courseInfo?.courseOutput?.Chapters?.length > 0 ? Math.round(((courseInfo?.courseOutput?.Chapters?.filter((_, idx) => dbChapters.find(c => c.chapterId == String(idx))?.completed).length || 0) / courseInfo?.courseOutput?.Chapters?.length) * 100) : 0}%
-                    </p>
-                </div>
-                {/* Progress Bar */}
-                <div className="w-full bg-[#282828] rounded-full h-1.5 mt-2 overflow-hidden">
-                    <div 
-                        className="bg-[#1DB954] h-1.5 transition-all duration-500" 
-                        style={{ width: `${courseInfo?.courseOutput?.Chapters?.length > 0 ? ((courseInfo?.courseOutput?.Chapters?.filter((_, idx) => dbChapters.find(c => c.chapterId == String(idx))?.completed).length || 0) / courseInfo?.courseOutput?.Chapters?.length) * 100 : 0}%` }}
-                    ></div>
-                </div>
-            </div>
-            <div className='overflow-y-auto h-[calc(100vh-180px)] custom-scrollbar'>
-                {courseInfo?.courseOutput?.Chapters.map((chapter, index) => (
-                    <div 
-                        key={index} 
-                        className={`cursor-pointer transition-all duration-200 hover:bg-white/[0.03] ${selectedChapter?.["Chapter Name"] === chapter?.["Chapter Name"] && 'bg-[#1DB954]/10 border-l-2 border-[#1DB954]'}`} 
-                        onClick={() => {
-                            setSelectedChapter(chapter);
-                            GetSelectedChapterContent(index);
-                        }}
-                    >
-                        <ChapterListCard 
-                            chapter={chapter} 
-                            index={index}
-                            isCompleted={dbChapters.find(c => c.chapterId == String(index))?.completed}
-                        />
+    return (
+        <div className='flex min-h-screen bg-background'>
+
+            {/* Sidebar */}
+            <div className='md:w-72 hidden md:block h-screen fixed border-r border-border/50 bg-[#0d0d14] z-10'>
+                <div className='p-4 border-b border-border/50'>
+
+                    {/* display the title */}
+                    <h2 className='font-semibold text-sm text-white leading-snug line-clamp-2'>
+                        {courseInfo?.courseOutput?.["Course Name"]}
+                    </h2>
+
+                    <div className='flex items-center justify-between mt-3'>
+                        <p className='text-xs text-[#B3B3B3]'>
+                            {courseInfo?.courseOutput?.Chapters?.filter((_, idx) => dbChapters.find(c => c.chapterId == String(idx))?.completed).length || 0} / {courseInfo?.courseOutput?.Chapters?.length || 0} completed
+                        </p>
+                        <p className='text-xs font-bold text-[#1DB954]'>
+                            {courseInfo?.courseOutput?.Chapters?.length > 0 ? Math.round(((courseInfo?.courseOutput?.Chapters?.filter((_, idx) => dbChapters.find(c => c.chapterId == String(idx))?.completed).length || 0) / courseInfo?.courseOutput?.Chapters?.length) * 100) : 0}%
+                        </p>
                     </div>
-                ))}
+                    {/* Progress Bar */}
+                    <div className="w-full bg-[#282828] rounded-full h-1.5 mt-2 overflow-hidden">
+                        <div
+                            className="bg-[#1DB954] h-1.5 transition-all duration-500"
+                            style={{ width: `${courseInfo?.courseOutput?.Chapters?.length > 0 ? ((courseInfo?.courseOutput?.Chapters?.filter((_, idx) => dbChapters.find(c => c.chapterId == String(idx))?.completed).length || 0) / courseInfo?.courseOutput?.Chapters?.length) * 100 : 0}%` }}
+                        ></div>
+                    </div>
+                </div>
+                <div className='overflow-y-auto h-[calc(100vh-180px)] custom-scrollbar'>
+                    {courseInfo?.courseOutput?.Chapters.map((chapter, index) => (
+                        <div
+                            key={index}
+                            className={`cursor-pointer transition-all duration-200 hover:bg-white/[0.03] ${selectedChapter?.["Chapter Name"] === chapter?.["Chapter Name"] && 'bg-[#1DB954]/10 border-l-2 border-[#1DB954]'}`}
+                            onClick={() => {
+                                setSelectedChapter(chapter);
+                                GetSelectedChapterContent(index);
+                            }}
+                        >
+                            <ChapterListCard
+                                chapter={chapter}
+                                index={index}
+                                isCompleted={dbChapters.find(c => c.chapterId == String(index))?.completed}
+                            />
+                        </div>
+                    ))}
+                </div>
+
+                {/* Download Button */}
+                <div className='absolute bottom-0 w-full p-4 border-t border-border/50 bg-[#0d0d14]'>
+                    <button
+                        onClick={downloadCourseAsMarkdown}
+                        className='w-full flex items-center justify-center gap-2 bg-[#282828] hover:bg-[#1DB954]/20 hover:text-[#1DB954] hover:border-[#1DB954]/50 border border-transparent text-white text-sm font-semibold py-3 rounded-xl transition-all duration-300'
+                    >
+                        <HiOutlineDocumentDownload className='text-lg' />
+                        Download Course
+                    </button>
+                </div>
             </div>
-            
-            {/* Download Button */}
-            <div className='absolute bottom-0 w-full p-4 border-t border-border/50 bg-[#0d0d14]'>
-                <button 
-                    onClick={downloadCourseAsMarkdown}
-                    className='w-full flex items-center justify-center gap-2 bg-[#282828] hover:bg-[#1DB954]/20 hover:text-[#1DB954] hover:border-[#1DB954]/50 border border-transparent text-white text-sm font-semibold py-3 rounded-xl transition-all duration-300'
-                >
-                    <HiOutlineDocumentDownload className='text-lg' />
-                    Download Course
-                </button>
+
+            {/* Content */}
+            <div className='md:ml-72 w-full'>
+                <ChapterContent
+                    chapter={selectedChapter}
+                    content={chapterContent}
+                    isCompleted={dbChapters.find(c => c.chapterId == chapterContent?.chapterId)?.completed}
+                    onMarkCompleted={(chapterId, isCompleted) => {
+                        setDbChapters(prev => prev.map(c => c.chapterId == chapterId ? { ...c, completed: isCompleted } : c));
+                    }}
+                />
             </div>
         </div>
-        
-        {/* Content */}
-        <div className='md:ml-72 w-full'>
-            <ChapterContent 
-                chapter={selectedChapter} 
-                content={chapterContent}
-                isCompleted={dbChapters.find(c => c.chapterId == chapterContent?.chapterId)?.completed}
-                onMarkCompleted={(chapterId, isCompleted) => {
-                    setDbChapters(prev => prev.map(c => c.chapterId == chapterId ? { ...c, completed: isCompleted } : c));
-                }}
-            />
-        </div>
-    </div>
-  )
+    )
 }
 
 export default CourseStart;

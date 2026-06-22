@@ -11,21 +11,28 @@ import service from '@/configs/service';
 import { useRouter } from 'next/navigation';
 
 
-const CourseLayout = ({params}) => {
-    
+const CourseLayout = ({ params }) => {
+
     const router = useRouter();
 
+    //extracted the courseId from the params
     const unwrappedParams = use(params);
     const courseId = unwrappedParams.courseId;
+
     const [courseInfo, setCourseInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState(false);
 
+
+    {/* whenever the courseId changes this gets triggered and if the courseId is valid 
+        then it fetched the course from the db 
+    */}
     useEffect(() => {
         const fetchCourse = async () => {
-            if (!courseId) return; 
+            if (!courseId) return;
             setLoading(true);
             try {
+                //fetcheds data from the backend and return the courseInfo
                 const result = await getCourseById(courseId);
                 console.log("Fetched Data:", result);
                 setCourseInfo(result);
@@ -47,7 +54,7 @@ const CourseLayout = ({params}) => {
         try {
             let allSuccess = true;
             for (let index = 0; index < chapters.length; index++) {
-                
+
                 const chapter = chapters[index];
                 const courseTopic = courseInfo?.name || courseInfo?.courseOutput?.Topic;
                 const chapterName = chapter?.["Chapter Name"];
@@ -73,24 +80,25 @@ const CourseLayout = ({params}) => {
                 let chapterSuccess = false;
 
                 // Try generating chapter content with one retry (2 attempts total)
-                for (let attempt = 1; attempt <= 2; attempt++) {
+                for (let attempt = 1; attempt <= 3; attempt++) {
                     try {
                         //Get Youtube Video
                         let videoId = '';
                         try {
+                            //we are passing the chapter name and the course topic as the query
                             const resp = await service.getVideos(`${courseTopic} ${chapterName}`);
                             videoId = resp[0]?.id?.videoId || '';
                         } catch (ytError) {
                             console.error(`Failed to fetch YouTube video for ${chapterName}`, ytError);
                         }
 
-                        // 1. Call the AI Model
+                        // 1. Call the AI Model -> only give the title,detailed description and code example if present
                         const aiResult = await generateChapterContentAI(PROMPT);
-                        
+
 
                         const payload = {
                             courseId: courseId,
-                            chapterId: index, 
+                            chapterId: index,
                             content: aiResult,
                             videoId: videoId
                         };
@@ -103,7 +111,7 @@ const CourseLayout = ({params}) => {
                         console.error(`Attempt ${attempt} failed for chapter ${index}:`, err);
                     }
                 }
-                
+
                 if (!chapterSuccess) {
                     allSuccess = false;
                     break; // Stop further processing if all retries fail
@@ -111,8 +119,10 @@ const CourseLayout = ({params}) => {
             }
 
             if (allSuccess) {
+                //the course has been made completely we have to just present it
                 await publishCourse(courseInfo?.courseId);
-                router.replace('/create-course/'+courseInfo?.courseId+'/finish');
+                //doesnot stores history so we cannot go back by clicking the back button
+                router.replace('/create-course/' + courseInfo?.courseId + '/finish');
             } else {
                 alert("AI Model is on high demand. Please try again later.");
             }
@@ -125,37 +135,40 @@ const CourseLayout = ({params}) => {
         }
     }
 
-  return (
-    <div className='mt-10 px-6 md:px-20 lg:px-44'>
+    return (
+        <div className='mt-10 px-6 md:px-20 lg:px-44'>
 
-        <h2 className='font-bold text-center text-2xl'>
-          <span className='gradient-text'>Course Layout</span>
-        </h2>
-        <LoadingDialog loading={isGenerating}/>
+            {/* title-Course Layout */}
+            <h2 className='font-bold text-center text-2xl'>
+                <span className='gradient-text'>Course Layout</span>
+            </h2>
+            <LoadingDialog loading={isGenerating} />
 
-        {courseInfo ? (
-            <>
-                <CourseBasicInfo courseInfo={courseInfo} setCourseInfo={setCourseInfo}/>
-                <CourseDetails courseInfo={courseInfo}/>
-                <ChapterList courseInfo={courseInfo} setCourseInfo={setCourseInfo}/>
-            </>
-        ) : (
-            <div className='flex items-center justify-center h-64'>
-                <div className='flex flex-col items-center gap-3'>
-                    <div className='w-8 h-8 rounded-full border-2 border-violet-500 border-t-transparent animate-spin' />
-                    <p className='text-slate-400 font-medium'>Loading your course...</p>
+            {/* if we have successfully fetched the course then display it */}
+            {courseInfo ? (
+                <>
+                    <CourseBasicInfo courseInfo={courseInfo} setCourseInfo={setCourseInfo} />
+                    <CourseDetails courseInfo={courseInfo} />
+                    <ChapterList courseInfo={courseInfo} setCourseInfo={setCourseInfo} />
+                </>
+            ) : (
+                /* custom loader */
+                <div className='flex items-center justify-center h-64'>
+                    <div className='flex flex-col items-center gap-3'>
+                        <div className='w-8 h-8 rounded-full border-2 border-violet-500 border-t-transparent animate-spin' />
+                        <p className='text-slate-400 font-medium'>Loading your course...</p>
+                    </div>
                 </div>
-            </div>
-        )}
+            )}
 
-        <Button 
-          className='my-10 gradient-primary text-white border-0 hover:opacity-90 shadow-lg shadow-violet-500/20 gap-2' 
-          onClick={GenerateChapterContent}
-        >
-          ✨ Generate Course Content
-        </Button>
-    </div>
-  )
+            <Button
+                className='my-10 gradient-primary text-white border-0 hover:opacity-90 shadow-lg shadow-violet-500/20 gap-2'
+                onClick={GenerateChapterContent}
+            >
+                ✨ Generate Course Content
+            </Button>
+        </div>
+    )
 }
 
 export default CourseLayout

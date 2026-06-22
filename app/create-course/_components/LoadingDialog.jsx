@@ -7,6 +7,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import Image from 'next/image'
 
+{/* customized ui component to give special effect on loading */ }
+
 const LoadingDialog = ({ loading }) => {
   return (
     <AlertDialog open={loading}>
@@ -21,10 +23,10 @@ const LoadingDialog = ({ loading }) => {
         {/* 2. Move your layout div OUTSIDE of any Description or Header tags */}
         <div className='flex flex-col items-center py-10'>
           <div className='relative'>
-            <Image 
-              src={'/dialog-animated.gif'} 
-              alt='loader' 
-              height={100} 
+            <Image
+              src={'/dialog-animated.gif'}
+              alt='loader'
+              height={100}
               width={100}
               className='rounded-xl'
             />

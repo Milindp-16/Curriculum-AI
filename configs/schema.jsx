@@ -12,7 +12,7 @@ export const CourseList = pgTable('courseList',{
     userName:varchar('userName'),
     userProfileImage:varchar('userProfileImage'),
     courseBanner:varchar('courseBanner').default('/img-ph.webp'),
-    publish:boolean('publish').default('false')
+    publish:boolean('publish').default(false)
 })
 
 export const Chapters = pgTable('chapters',{
