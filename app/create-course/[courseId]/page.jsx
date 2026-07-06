@@ -62,6 +62,7 @@ const CourseLayout = ({ params }) => {
                 const PROMPT = `
                     You are an expert educator creating content for a course.
                     Generate a detailed explanation for the following topic and chapter.
+                    Also generate 3 multiple-choice quiz questions (MCQs) to test the learner's understanding of this chapter.
 
                     Course Topic: ${courseInfo?.name || courseInfo?.courseOutput?.Topic}
                     Chapter Name: ${chapter?.["Chapter Name"]}
@@ -71,7 +72,14 @@ const CourseLayout = ({ params }) => {
                     {
                     "title": "String - The title of the chapter",
                     "description": "String - A highly detailed, multi-paragraph explanation of the concepts",
-                    "codeExample": "String - A relevant HTML code example. Strictly Leave as an empty string if no code is needed."
+                    "codeExample": "String - A relevant HTML code example. Strictly Leave as an empty string if no code is needed.",
+                    "mcqs": [
+                        {
+                        "question": "String - A clear, well-formed question about the chapter content",
+                        "options": ["String - Option A", "String - Option B", "String - Option C", "String - Option D"],
+                        "correctAnswer": "String - Must exactly match one of the four options above"
+                        }
+                    ]
                     }
                     `;
 

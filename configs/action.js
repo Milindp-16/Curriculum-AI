@@ -373,9 +373,6 @@ export async function searchGlobalCourses(userQuery) {
 
     } catch (error) {
         console.error("Semantic Search Error:", error);
-
-        // Ultimate fallback: if the entire search pipeline fails (Redis down, embedding API error, etc.)
-        // still try to return something useful via plain SQL
         try {
             const fallbackResults = await db.select()
                 .from(CourseList)
@@ -392,5 +389,50 @@ export async function searchGlobalCourses(userQuery) {
             console.error("SQL Fallback also failed:", dbError);
             throw new Error("Failed to search courses.");
         }
+    }
+}
+
+
+export async function getQuizData(courseId) {
+    try {
+        // Only select the fields needed for the quiz — no full content, no videoId
+        const chapters = await db
+            .select({
+                chapterId: Chapters.chapterId,
+                content: Chapters.content,
+                completed: Chapters.completed,
+            })
+            .from(Chapters)
+            .where(eq(Chapters.courseId, courseId));
+
+        const totalChapters = chapters.length;
+        const completedChapters = chapters.filter(c => c.completed).length;
+        const isFullyCompleted = totalChapters > 0 && completedChapters === totalChapters;
+
+        // Extract only MCQs from each chapter's content, tagging each with the chapter title
+        const allMcqs = [];
+        for (const chapter of chapters) {
+            const mcqs = chapter.content?.mcqs;
+            if (Array.isArray(mcqs)) {
+                for (const mcq of mcqs) {
+                    allMcqs.push({
+                        chapterTitle: chapter.content?.title || `Chapter ${chapter.chapterId}`,
+                        question: mcq.question,
+                        options: mcq.options,
+                        correctAnswer: mcq.correctAnswer,
+                    });
+                }
+            }
+        }
+
+        return {
+            isFullyCompleted,
+            totalChapters,
+            completedChapters,
+            mcqs: allMcqs,
+        };
+    } catch (error) {
+        console.error("Database Error: Failed to fetch quiz data", error);
+        throw new Error("Failed to load quiz data");
     }
 }

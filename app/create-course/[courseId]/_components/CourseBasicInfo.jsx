@@ -85,6 +85,8 @@ const CourseBasicInfo = ({ courseInfo, setCourseInfo, edit = true }) => {
                     <h2 className='font-medium mt-4 flex gap-2 items-center text-violet-400 text-sm'>
                         <HiPuzzle /> {courseInfo?.category}
                     </h2>
+
+                    {/* start button to start learning only shows when edit = false and navigates to path -> /course/[courseId]/start */}
                     {!edit && <Link href={'/course/' + courseInfo?.courseId + '/start'}>
                         <Button className='w-full mt-5 gradient-primary text-white border-0 hover:opacity-90 shadow-lg shadow-violet-500/20 text-base py-5'>
                             ▶ Start Learning

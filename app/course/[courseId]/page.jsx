@@ -8,6 +8,7 @@ import React, { use, useEffect, useState } from 'react'
 
 function Course({ params }) {
 
+    /* fetching the courseId from params */
     const unwrappedParams = use(params);
     const courseId = unwrappedParams?.courseId;
 
@@ -19,8 +20,8 @@ function Course({ params }) {
             if (!courseId) return;
             setLoading(true);
             try {
+                //fetch course from database and set state
                 const res = await getCourseById(courseId);
-                // console.log(res);
                 setCourseInfo(res);
             } catch (error) {
                 console.log('Unable to fetch the course: ', error);
