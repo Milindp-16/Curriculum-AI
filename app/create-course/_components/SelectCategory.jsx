@@ -29,7 +29,7 @@ const SelectCategory = () => {
               }`}
             onClick={() => handleCategoryChange(item.name)}
           >
-            {/* Rendering the banner image */}
+            {/* Rendering the banner image and category name */}
             <div className='w-16 h-16 rounded-xl overflow-hidden mb-3 group-hover:scale-110 transition-transform duration-300'>
               <Image src={item.icon} alt={item.name} width={64} height={64} className='w-full h-full object-cover' />
             </div>

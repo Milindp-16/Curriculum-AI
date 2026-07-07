@@ -71,15 +71,15 @@ export async function saveCourseToDb(courseData) {
         const cacheKey = `user_courses_dashboard:${courseData.createdBy}`;
         await redis.del(cacheKey);
 
-        //the new created course have to be available in the search index for performing semantic searching
+        {/* the new created course have to be available in the search index for performing semantic searching in explore section */ }
         await initializeGlobalSearchIndex();
 
         // We create a string on the basis of which we perform semantic search.
         // Includes the category, title, level and the courseOutput as parameters.
-        const semanticText = `Category: ${courseData.category}. Title: ${courseData.name}. Level: ${courseData.level}. CourseOutput: ${courseData.courseOutput}`;
+        const semanticText = `Category: ${courseData.category}. Title: ${courseData.name}. Level: ${courseData.level}. CourseDescription: ${courseData?.courseOutput?.description}`;
 
         // The text is converted to vector embeddings using the AI model.
-        // These vector embeddings contain the actual meaning of the above string represented as float-32 vectors.
+        // These vector embeddings contain the actual meaning of the above string in form of vector<float>
         const embedResponse = await ai.models.embedContent({
             model: 'gemini-embedding-001',
             contents: semanticText,

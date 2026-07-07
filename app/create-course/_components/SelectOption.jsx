@@ -36,9 +36,9 @@ const SelectOption = () => {
                         </SelectTrigger>
                         <SelectContent className='bg-[#181818] border-white/10 text-white'>
                             <SelectGroup>
-                                <SelectItem value="Beginner" className="focus:bg-white/10 focus:text-white cursor-pointer py-3">Beginner</SelectItem>
-                                <SelectItem value="Intermediate" className="focus:bg-white/10 focus:text-white cursor-pointer py-3">Intermediate</SelectItem>
-                                <SelectItem value="Advance" className="focus:bg-white/10 focus:text-white cursor-pointer py-3">Advance</SelectItem>
+                                <SelectItem value="Beginner" className="focus:bg-white/10 focus:text-white cursor-pointer p-3">Beginner</SelectItem>
+                                <SelectItem value="Intermediate" className="focus:bg-white/10 focus:text-white cursor-pointer p-3">Intermediate</SelectItem>
+                                <SelectItem value="Advance" className="focus:bg-white/10 focus:text-white cursor-pointer p-3">Advance</SelectItem>
                             </SelectGroup>
                         </SelectContent>
                     </Select>
@@ -55,7 +55,7 @@ const SelectOption = () => {
                             <SelectGroup>
                                 <SelectItem value="1 Hour" className="focus:bg-white/10 focus:text-white cursor-pointer py-3">1 Hour</SelectItem>
                                 <SelectItem value="2 Hours" className="focus:bg-white/10 focus:text-white cursor-pointer py-3">2 Hours</SelectItem>
-                                <SelectItem value="More than 3 Hours" className="focus:bg-white/10 focus:text-white cursor-pointer py-3">More than 3 Hours</SelectItem>
+                                <SelectItem value="More than 2 Hours" className="focus:bg-white/10 focus:text-white cursor-pointer py-3">More than 3 Hours</SelectItem>
                             </SelectGroup>
                         </SelectContent>
                     </Select>

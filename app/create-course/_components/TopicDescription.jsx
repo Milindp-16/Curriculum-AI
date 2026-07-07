@@ -22,7 +22,7 @@ const TopicDescription = () => {
           Write the topic for which you want to generate a course (example: Python, Yoga, etc.)
         </label>
         <Input
-          className='h-12 bg-[#181818] border-white/10 text-white placeholder:text-[#B3B3B3] focus:border-[#1DB954] focus:ring-1 focus:ring-[#1DB954] transition-all rounded-lg'
+          className='h-12 bg-[#181818] border-white/10 text-white placeholder:text-[#B3B3B3] focus:border-[#1DB954] focus:ring-1 focus:ring-[#1DB954] transition-all rounded-lg p-4'
           placeholder='Enter course topic'
           defaultValue={userCourseInput?.topic}
           onChange={(e) => handleInputChange('topic', e.target.value)}

@@ -6,7 +6,8 @@ import { GoogleGenAI } from '@google/genai';
 import { v4 as uuidv4 } from 'uuid';
 
 
-//intialize SDK client that communicates with the google gemini in JSON schema
+//intialize SDK(software development kit) client that communicates with the google gemini in JSON schema
+//instead making raw manual http fetch req, we use SDK which provides a set of read to use JS functions to make interaction with ai simpler
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
@@ -18,7 +19,7 @@ const config = {
   responseMimeType: "application/json",
 };
 
-//converts normal JS array into binary buffer array
+//converts normal JS array -> first downcast to 32bit float values and then wrap it aroud binary buffer
 function float32Buffer(arr) {
   return Buffer.from(new Float32Array(arr).buffer);
 }
@@ -40,9 +41,9 @@ async function initializeVectorIndex() {
     const oldKeys = await redis.keys('course_cache:*'); //every object whose key starts with course_cache and then wildcard matching is selected
     if (oldKeys.length > 0) await redis.del(...oldKeys);
 
-    //Initializes and creates an index named 'idx:courses' looking at keys starting with 'course_cache:' in the redis cloud 
+    //Initializes and creates an index named 'idx:courses' looking at keys starting with 'course_cache:' in the redis db 
     // -> runs a background thread that constantly montiors and looks for prefix course_cache and if it finds it, 
-    // then it creates a entry of it in search index
+    // then it creates a entry of it in search index and stires vector embedding
     await redis.call(
       'FT.CREATE', 'idx:courses', 'ON', 'JSON', 'PREFIX', '1', 'course_cache:',
       'SCHEMA',
@@ -88,6 +89,7 @@ export async function generateCourseLayout(finalPrompt, userInputPrompt) {
 
   await initializeVectorIndex();
 
+  {/* creating vector embeddings of the user's request */ }
   const embedResponse = await ai.models.embedContent({
     model: 'gemini-embedding-001',
     contents: userInputPrompt,
@@ -121,6 +123,8 @@ export async function generateCourseLayout(finalPrompt, userInputPrompt) {
   }
 
   //cache miss - fetch the course layout from the api (expensive operation)
+
+  {/* fake history conversation that you are feeding to gemeni-ai -> it acts as a strict blueprint */ }
   const historyTemplate = [
     {
       role: "user",
@@ -151,27 +155,29 @@ export async function generateCourseLayout(finalPrompt, userInputPrompt) {
   ];
 
   try {
-    // Moved chat creation inside the try block for better error catching
+    {/* setting up a new chat-session object with gemini -> just the rules */ }
     const chat = ai.chats.create({
       model: 'gemini-3-flash-preview',
-      config: config,
+      config: config, //defined above
       history: historyTemplate,
     });
 
+    {/* sending the request */ }
     const response = await chat.sendMessage({
       message: finalPrompt,
     });
 
     if (!response.text) throw new Error("The AI returned an empty response.");
 
+    {/* regex to trim the starting and ending backticks */ }
     const cleanJsonText = response.text.replace(/```json/gi, '').replace(/```/g, '').trim();
     const finalData = JSON.parse(cleanJsonText);
 
     const uniqueId = uuidv4();
     const cacheKey = `course_cache:${uniqueId}`;
     const redisDocument = {
-      embedding: vectorArray, // The math representation
-      payload: finalData      // The actual course JSON
+      embedding: vectorArray, // we have passed the standard JS array because the json.stirngify can't properly format binary buffers into json string
+      payload: finalData      // The actual course JSON -> we have kept it in payload because we want to return the final course structure if knn succeeds
     };
 
     await redis.call('JSON.SET', cacheKey, '$', JSON.stringify(redisDocument));

@@ -63,7 +63,7 @@ const CreateCourse = () => {
         {/* creates a final prompt using a default prompt and a prompt which is generated from userCourseInput and use that
             final prompt to generate course layout
             we have added semantic caching in this like is similar userCourseInput course is found using the knn + Redisearch 
-            then we return that cached course and donot perform expensive ai call
+            then we return that cached course layout and donot perform expensive ai call
         */}
         const BASIC_PROMPT = `Generate a course tutorial. You MUST return ONLY a valid JSON object. Do not change the key names. You must strictly use this exact JSON structure:
             {
@@ -82,7 +82,7 @@ const CreateCourse = () => {
     
         Here are the details to use: `;
 
-        const USER_INPUT_PROMPT = `Category: ${userCourseInput?.category}, Topic: ${userCourseInput?.topic}, Level: ${userCourseInput?.level}, Duration: ${userCourseInput?.duration}, NoOfChapters: ${userCourseInput?.noOfChapters}`;
+        const USER_INPUT_PROMPT = `Category: ${userCourseInput?.category}, Topic: ${userCourseInput?.topic}, Level: ${userCourseInput?.level}, Duration: ${userCourseInput?.duration}, NoOfChapters: ${userCourseInput?.noOfChapters}, DisplayVideo: ${userCourseInput?.displayVideo}`;
 
         const FINAL_PROMPT = BASIC_PROMPT + USER_INPUT_PROMPT;
         console.log(FINAL_PROMPT);
@@ -143,13 +143,14 @@ const CreateCourse = () => {
                 {/* Stepper  rendering the progress bar/timeline on the top by mapping*/}
                 <div className='flex items-center justify-between w-full max-w-2xl mx-auto mt-10 mb-14 relative'>
                     {StepperOptions.map((item, idx) => (
-                        <React.Fragment key={idx}>
+                        <React.Fragment key={idx}> {/* group children without adding an extra node in DOM unlike div */}
                             <div className='flex flex-col items-center relative z-10'>
                                 <div className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-full text-lg transition-all duration-300 border-4 border-[#121212] ${activeIndex >= idx ? 'bg-[#1DB954] text-black shadow-[0_0_15px_rgba(29,185,84,0.4)]' : 'bg-[#282828] text-[#B3B3B3]'}`}>
                                     {item.icon}
                                 </div>
                                 <h2 className={`absolute top-16 md:top-18 text-[10px] md:text-xs font-bold uppercase tracking-wider text-center w-32 ${activeIndex >= idx ? 'text-white' : 'text-[#B3B3B3]'}`}>{item.name}</h2>
                             </div>
+                            {/* shows the timeline */}
                             {idx !== StepperOptions.length - 1 && (
                                 <div className={`flex-1 h-[2px] mx-2 transition-all duration-500 ${activeIndex > idx ? 'bg-[#1DB954]' : 'bg-[#282828]'}`} />
                             )}
