@@ -115,8 +115,8 @@ function ChapterContent({ chapter, content, isCompleted, onMarkCompleted }) {
                     onClick={handleMarkCompleted}
                     disabled={isPending}
                     className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold transition-all duration-300 shadow-lg ${isCompleted
-                            ? 'bg-[#1DB954]/20 text-[#1DB954] border border-[#1DB954]/50 hover:bg-[#1DB954]/30'
-                            : 'bg-[#1DB954] text-black hover:bg-[#1ed760] shadow-[#1DB954]/20'
+                        ? 'bg-[#1DB954]/20 text-[#1DB954] border border-[#1DB954]/50 hover:bg-[#1DB954]/30'
+                        : 'bg-[#1DB954] text-black hover:bg-[#1ed760] shadow-[#1DB954]/20'
                         } ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                     {isPending ? (

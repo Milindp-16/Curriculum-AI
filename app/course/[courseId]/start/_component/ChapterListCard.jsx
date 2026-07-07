@@ -1,5 +1,5 @@
 import React from 'react'
-import { HiOutlineClock } from "react-icons/hi2";
+import { HiOutlineClock, HiCheck } from "react-icons/hi2";
 
 function ChapterListCard({ chapter, index, isCompleted }) {
   return (
@@ -17,9 +17,7 @@ function ChapterListCard({ chapter, index, isCompleted }) {
       {/* shows the tick mark if the chapter is completed */}
       {isCompleted && (
         <div className="text-[#1DB954] flex-shrink-0">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 drop-shadow-[0_0_5px_rgba(29,185,84,0.5)]" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-          </svg>
+          <HiCheck className="h-5 w-5 drop-shadow-[0_0_5px_rgba(29,185,84,0.5)]" />
         </div>
       )}
     </div>

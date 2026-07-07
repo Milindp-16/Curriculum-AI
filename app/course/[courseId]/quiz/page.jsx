@@ -16,7 +16,6 @@ function QuizPage({ params }) {
     const [selectedOption, setSelectedOption] = useState(null);
     const [hasAnswered, setHasAnswered] = useState(false);
     const [score, setScore] = useState(0);
-    const [answers, setAnswers] = useState([]); // track each answer
     const [quizFinished, setQuizFinished] = useState(false);
 
     useEffect(() => {
@@ -64,14 +63,7 @@ function QuizPage({ params }) {
         setHasAnswered(true);
 
         const isCorrect = option === currentQuestion.correctAnswer;
-        if (isCorrect) setScore(prev => prev + 1);
-
-        setAnswers(prev => [...prev, {
-            question: currentQuestion.question,
-            selected: option,
-            correct: currentQuestion.correctAnswer,
-            isCorrect
-        }]);
+        if (isCorrect) setScore(score + 1);
     };
 
     const handleNext = () => {
@@ -86,9 +78,7 @@ function QuizPage({ params }) {
 
     const getOptionStyle = (option) => {
         if (!hasAnswered) {
-            return option === selectedOption
-                ? 'border-[#1DB954] bg-[#1DB954]/10'
-                : 'border-border/30 bg-[#181818] hover:bg-[#282828] hover:border-white/20';
+            return 'border-border/30 bg-[#181818] hover:bg-[#282828] hover:border-white/20';
         }
 
         // After answering
@@ -99,17 +89,6 @@ function QuizPage({ params }) {
             return 'border-[#E22134] bg-[#E22134]/15 shadow-[0_0_20px_rgba(226,33,52,0.2)]';
         }
         return 'border-border/20 bg-[#181818] opacity-50';
-    };
-
-    const getOptionIcon = (option) => {
-        if (!hasAnswered) return null;
-        if (option === currentQuestion.correctAnswer) {
-            return <HiOutlineCheckCircle className='text-[#1DB954] text-xl flex-shrink-0' />;
-        }
-        if (option === selectedOption && option !== currentQuestion.correctAnswer) {
-            return <HiOutlineXCircle className='text-[#E22134] text-xl flex-shrink-0' />;
-        }
-        return null;
     };
 
     // Loading state
@@ -145,51 +124,18 @@ function QuizPage({ params }) {
                         </h1>
                         <p className='text-slate-400 mb-6'>{courseName}</p>
 
-                        {/* Score ring */}
-                        <div className='relative inline-flex items-center justify-center mb-8'>
-                            <svg className='w-36 h-36 transform -rotate-90' viewBox='0 0 120 120'>
-                                <circle cx='60' cy='60' r='52' stroke='#282828' strokeWidth='8' fill='none' />
-                                <circle
-                                    cx='60' cy='60' r='52'
-                                    stroke={isPassing ? '#1DB954' : '#E22134'}
-                                    strokeWidth='8'
-                                    fill='none'
-                                    strokeLinecap='round'
-                                    strokeDasharray={`${2 * Math.PI * 52}`}
-                                    strokeDashoffset={`${2 * Math.PI * 52 * (1 - percentage / 100)}`}
-                                    style={{ transition: 'stroke-dashoffset 1.5s ease-out' }}
-                                />
-                            </svg>
-                            <div className='absolute inset-0 flex flex-col items-center justify-center'>
-                                <span className='text-3xl font-bold text-white'>{percentage}%</span>
-                                <span className='text-xs text-slate-400'>{score}/{totalQuestions}</span>
-                            </div>
+                        {/* Score */}
+                        <div className='flex flex-col items-center justify-center mb-8'>
+                            <span className={`text-6xl font-black mb-2 tracking-tight ${isPassing ? 'text-[#1DB954]' : 'text-[#E22134]'}`}>
+                                {percentage}%
+                            </span>
+                            <span className='text-sm font-medium text-slate-400 bg-[#282828] px-4 py-1.5 rounded-full'>
+                                {score} out of {totalQuestions} correct
+                            </span>
                         </div>
                     </div>
 
-                    {/* Answer Breakdown */}
-                    <div className='bg-[#181818] rounded-xl border border-border/30 overflow-hidden mb-8'>
-                        <div className='p-4 border-b border-border/20'>
-                            <h3 className='font-semibold text-white text-sm'>Answer Breakdown</h3>
-                        </div>
-                        <div className='max-h-80 overflow-y-auto custom-scrollbar'>
-                            {answers.map((ans, idx) => (
-                                <div key={idx} className='flex items-start gap-3 p-4 border-b border-border/10 last:border-b-0'>
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold ${ans.isCorrect ? 'bg-[#1DB954] text-black' : 'bg-[#E22134] text-white'}`}>
-                                        {ans.isCorrect ? '✓' : '✗'}
-                                    </div>
-                                    <div className='min-w-0 flex-1'>
-                                        <p className='text-sm text-slate-200 leading-snug'>{ans.question}</p>
-                                        {!ans.isCorrect && (
-                                            <p className='text-xs text-slate-500 mt-1'>
-                                                Your answer: <span className='text-[#E22134]'>{ans.selected}</span> • Correct: <span className='text-[#1DB954]'>{ans.correct}</span>
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+
 
                     {/* Action Buttons */}
                     <div className='flex gap-4 justify-center'>
@@ -207,7 +153,6 @@ function QuizPage({ params }) {
                                 setSelectedOption(null);
                                 setHasAnswered(false);
                                 setScore(0);
-                                setAnswers([]);
                             }}
                             className='flex items-center gap-2 px-6 py-3 bg-[#1DB954] text-black rounded-full font-bold hover:bg-[#1ed760] transition-all shadow-lg shadow-[#1DB954]/20'
                         >
@@ -274,10 +219,10 @@ function QuizPage({ params }) {
                             >
                                 {/* Option letter */}
                                 <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 transition-all duration-300 ${hasAnswered && option === currentQuestion.correctAnswer
-                                        ? 'bg-[#1DB954] text-black'
-                                        : hasAnswered && option === selectedOption && option !== currentQuestion.correctAnswer
-                                            ? 'bg-[#E22134] text-white'
-                                            : 'bg-[#282828] text-slate-300'
+                                    ? 'bg-[#1DB954] text-black'
+                                    : hasAnswered && option === selectedOption && option !== currentQuestion.correctAnswer
+                                        ? 'bg-[#E22134] text-white'
+                                        : 'bg-[#282828] text-slate-300'
                                     }`}>
                                     {String.fromCharCode(65 + idx)}
                                 </span>
@@ -285,26 +230,9 @@ function QuizPage({ params }) {
                                 {/* Option text */}
                                 <span className='text-slate-200 text-sm flex-1'>{option}</span>
 
-                                {/* Correct/Wrong icon */}
-                                {getOptionIcon(option)}
                             </button>
                         ))}
                     </div>
-
-                    {/* Feedback message */}
-                    {hasAnswered && (
-                        <div className={`mt-6 p-4 rounded-xl border animate-fade-in ${selectedOption === currentQuestion.correctAnswer
-                                ? 'bg-[#1DB954]/10 border-[#1DB954]/30'
-                                : 'bg-[#E22134]/10 border-[#E22134]/30'
-                            }`}>
-                            <p className={`text-sm font-semibold ${selectedOption === currentQuestion.correctAnswer ? 'text-[#1DB954]' : 'text-[#E22134]'}`}>
-                                {selectedOption === currentQuestion.correctAnswer
-                                    ? '✓ Correct!'
-                                    : `✗ Incorrect — The correct answer is: ${currentQuestion.correctAnswer}`
-                                }
-                            </p>
-                        </div>
-                    )}
 
                     {/* Next button */}
                     {hasAnswered && (

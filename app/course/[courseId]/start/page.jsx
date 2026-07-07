@@ -14,9 +14,9 @@ function CourseStart({ params }) {
 
     const [courseInfo, setCourseInfo] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [selectedChapter, setSelectedChapter] = useState(null);
-    const [chapterContent, setChapterContent] = useState();
-    const [dbChapters, setDbChapters] = useState([]);
+    const [selectedChapter, setSelectedChapter] = useState(null); //high-level details about the chapter
+    const [chapterContent, setChapterContent] = useState(); //detailed content of the chapter
+    const [dbChapters, setDbChapters] = useState([]); //array containing the detailed content for all chapter
 
     useEffect(() => {
         const GetCourse = async () => {
@@ -29,6 +29,7 @@ function CourseStart({ params }) {
                 const chaptersRes = await getChaptersByCourseId(courseId);
                 setDbChapters(chaptersRes);
 
+                {/* by default select the first chapter and fetch its content */ }
                 if (res?.courseOutput?.Chapters?.length > 0) {
                     setSelectedChapter(res.courseOutput.Chapters[0]);
                     GetSelectedChapterContent(0, chaptersRes);
@@ -80,7 +81,7 @@ function CourseStart({ params }) {
         {/* the markdown content is converted into blob because we can't download the markdown content directly */ }
         const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
 
-        {/* creates a temporary local URL that points directly to the file in memory */ }
+        {/* creates a temporary local URL that points directly to the file */ }
         const url = URL.createObjectURL(blob);
         {/* creates an invisible anchor tag in the background */ }
         const a = document.createElement("a");
@@ -93,7 +94,7 @@ function CourseStart({ params }) {
         a.click();
         {/* removing the link */ }
         document.body.removeChild(a);
-        {/* revoking the url crucial for performance to prevent memory leak because thr text filw will be stored in RAm
+        {/* revoking the url crucial for performance to prevent memory leak because the text file will be stored in RAM
             untill user closes the tab */}
         URL.revokeObjectURL(url);
     };
@@ -112,14 +113,13 @@ function CourseStart({ params }) {
 
                     {/* displaying the progress status and the percentage of course completed */}
                     <div className='flex items-center justify-between mt-3'>
-                        {/* calculating the fraction of completed chapters */}
+                        {/* calculating the number of completed chapters */}
                         <p className='text-xs text-[#B3B3B3]'>
-                            {/* we are filtering out the chapters from the output based on the indexes which are completed */}
-                            {courseInfo?.courseOutput?.Chapters?.filter((_, idx) => dbChapters.find(c => c.chapterId == String(idx))?.completed).length || 0} / {courseInfo?.courseOutput?.Chapters?.length || 0} completed
+                            {dbChapters.filter(c => c.completed).length} / {courseInfo?.courseOutput?.Chapters?.length || 0} completed
                         </p>
                         {/* calculates the percentage of course completed */}
                         <p className='text-xs font-bold text-[#1DB954]'>
-                            {courseInfo?.courseOutput?.Chapters?.length > 0 ? Math.round(((courseInfo?.courseOutput?.Chapters?.filter((_, idx) => dbChapters.find(c => c.chapterId == String(idx))?.completed).length || 0) / courseInfo?.courseOutput?.Chapters?.length) * 100) : 0}%
+                            {courseInfo?.courseOutput?.Chapters?.length > 0 ? Math.round((dbChapters.filter(c => c.completed).length / courseInfo.courseOutput.Chapters.length) * 100) : 0}%
                         </p>
                     </div>
 
@@ -129,7 +129,7 @@ function CourseStart({ params }) {
                         {/* the inner div has dynamic width which changes on the basis of chapters completed */}
                         <div
                             className="bg-[#1DB954] h-1.5 transition-all duration-500"
-                            style={{ width: `${courseInfo?.courseOutput?.Chapters?.length > 0 ? ((courseInfo?.courseOutput?.Chapters?.filter((_, idx) => dbChapters.find(c => c.chapterId == String(idx))?.completed).length || 0) / courseInfo?.courseOutput?.Chapters?.length) * 100 : 0}%` }}
+                            style={{ width: `${courseInfo?.courseOutput?.Chapters?.length > 0 ? (dbChapters.filter(c => c.completed).length / courseInfo.courseOutput.Chapters.length) * 100 : 0}%` }}
                         ></div>
                     </div>
                 </div>
@@ -159,19 +159,18 @@ function CourseStart({ params }) {
 
                     {/* Take Quiz Button — locked until 100% completion */}
                     {(() => {
-                        const completedCount = courseInfo?.courseOutput?.Chapters?.filter((_, idx) => dbChapters.find(c => c.chapterId == String(idx))?.completed).length || 0;
-                        const totalCount = courseInfo?.courseOutput?.Chapters?.length || 0;
+                        const completedCount = dbChapters.filter(c => c.completed).length || 0;
+                        const totalCount = dbChapters.length;
                         const isFullyCompleted = totalCount > 0 && completedCount === totalCount;
 
                         return (
                             <button
                                 onClick={() => isFullyCompleted && router.push(`/course/${courseId}/quiz`)}
                                 disabled={!isFullyCompleted}
-                                className={`w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-xl transition-all duration-300 ${
-                                    isFullyCompleted
-                                        ? 'bg-[#1DB954] text-black hover:bg-[#1ed760] shadow-lg shadow-[#1DB954]/20 animate-pulse-glow cursor-pointer'
-                                        : 'bg-[#282828] text-slate-500 cursor-not-allowed border border-transparent'
-                                }`}
+                                className={`w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-xl transition-all duration-300 ${isFullyCompleted
+                                    ? 'bg-[#1DB954] text-black hover:bg-[#1ed760] shadow-lg shadow-[#1DB954]/20 animate-pulse-glow cursor-pointer'
+                                    : 'bg-[#282828] text-slate-500 cursor-not-allowed border border-transparent'
+                                    }`}
                                 title={!isFullyCompleted ? 'Complete all chapters to unlock the quiz' : 'Take the course quiz'}
                             >
                                 {isFullyCompleted
@@ -200,7 +199,7 @@ function CourseStart({ params }) {
                     content={chapterContent}
                     isCompleted={dbChapters.find(c => c.chapterId == chapterContent?.chapterId)?.completed}
                     onMarkCompleted={(chapterId, isCompleted) => {
-                        setDbChapters(prev => prev.map(c => c.chapterId == chapterId ? { ...c, completed: isCompleted } : c));
+                        setDbChapters(prev => prev.map(c => c.chapterId == chapterContent?.chapterId ? { ...c, completed: isCompleted } : c));
                     }}
                 />
             </div>
