@@ -24,14 +24,15 @@ const CourseBasicInfo = ({ courseInfo, setCourseInfo, edit = true }) => {
         setIsUploading(true);
         console.log(selectedFile);
 
+        {/* we can't send the heavy binary file as JSON -> formdata creates a data package */ }
         const formData = new FormData();
         formData.append('file', file); //the raw binary image
-        {/* This tells Cloudinary: "This incoming anonymous upload is allowed, and it should apply the 
-        presets defined for the course_images folder." */}
+        {/* allow users to upload images directly */ }
         formData.append('upload_preset', 'course_images');
 
         try {
-            // 3. Upload directly to Cloudinary via REST API
+
+            {/* sends the image directly from the user's laptop to cloudinary's server */ }
             const cloudinaryResponse = await fetch(
                 `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
                 {
@@ -111,7 +112,7 @@ const CourseBasicInfo = ({ courseInfo, setCourseInfo, edit = true }) => {
                             )}
                         </div>
                     </label>
-                    {/* the htmlFor and the id are the same so the component is triggered whenever we upload a new banner image*/}
+                    {/* the htmlFor and the id are the same so the component is triggered whenever we upload a new banner image -> clicking anywhere inside the label will automatically trigger the input*/}
                     {edit && <input type='file' id='upload-image' className='opacity-0 hidden' onChange={onFileSelected} />}
                 </div>
             </div>

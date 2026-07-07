@@ -3,9 +3,9 @@ import axios from "axios"
 
 const YOUTUBE_BASE_URL = 'https://www.googleapis.com/youtube/v3'
 
-const getVideos = async (query) => {
+export const getVideos = async (query) => {
     const params = {
-        part: 'snippet', //pecifies a comma-separated list of one or more search resource properties that the API response will include
+        part: 'snippet', //specifies a comma-separated list of one or more search resource properties that the API response will include
         q: query, //specifies the query term to search for
         maxResults: 1, //maximum number of items to be returned in the return set
         type: 'video', //type of video to be returned - channel,playlist,video
@@ -17,4 +17,3 @@ const getVideos = async (query) => {
     return res.data.items;
 }
 
-export default { getVideos };

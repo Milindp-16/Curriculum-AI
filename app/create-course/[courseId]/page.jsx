@@ -7,7 +7,7 @@ import ChapterList from './_components/ChapterList';
 import { Button } from '@/components/ui/button';
 import { generateChapterContentAI } from '@/configs/AiModel';
 import LoadingDialog from '../_components/LoadingDialog';
-import service from '@/configs/service';
+import { getVideos } from '@/configs/service';
 import { useRouter } from 'next/navigation';
 
 
@@ -66,6 +66,7 @@ const CourseLayout = ({ params }) => {
 
                     Course Topic: ${courseInfo?.name || courseInfo?.courseOutput?.Topic}
                     Chapter Name: ${chapter?.["Chapter Name"]}
+                    Chapter about: ${chapter?.about}
 
                     Return the response STRICTLY as a raw JSON object matching this exact schema. Do not include markdown tags like \`\`\`json, and do not include any conversational text before or after the JSON.
 
@@ -87,28 +88,28 @@ const CourseLayout = ({ params }) => {
 
                 let chapterSuccess = false;
 
-                // Try generating chapter content with one retry (2 attempts total)
+                // Try generating chapter content with one retry (3 attempts total)
                 for (let attempt = 1; attempt <= 3; attempt++) {
                     try {
                         //Get Youtube Video
                         let videoId = '';
                         try {
                             //we are passing the chapter name and the course topic as the query
-                            const resp = await service.getVideos(`${courseTopic} ${chapterName}`);
+                            const resp = await getVideos(`${courseTopic} ${chapterName} ${chapter?.about || ''}`);
                             videoId = resp[0]?.id?.videoId || '';
                         } catch (ytError) {
                             console.error(`Failed to fetch YouTube video for ${chapterName}`, ytError);
                         }
 
-                        // 1. Call the AI Model -> only give the title,detailed description and code example if present
+                        // 1. Call the AI Model
                         const aiResult = await generateChapterContentAI(PROMPT);
 
 
                         const payload = {
-                            courseId: courseId,
-                            chapterId: index,
+                            courseId: String(courseId),
+                            chapterId: String(index),
                             content: aiResult,
-                            videoId: videoId
+                            videoId: videoId || ''
                         };
 
                         await saveChapterContentToDb(payload);

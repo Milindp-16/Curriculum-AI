@@ -72,11 +72,12 @@ export async function saveCourseToDb(courseData) {
         await redis.del(cacheKey);
 
         {/* the new created course have to be available in the search index for performing semantic searching in explore section */ }
+        //check for compatibility
         await initializeGlobalSearchIndex();
 
         // We create a string on the basis of which we perform semantic search.
         // Includes the category, title, level and the courseOutput as parameters.
-        const semanticText = `Category: ${courseData.category}. Title: ${courseData.name}. Level: ${courseData.level}. CourseDescription: ${courseData?.courseOutput?.description}`;
+        const semanticText = `Category: ${courseData.category}. Title: ${courseData.name}. Level: ${courseData.level}. CourseDescription: ${courseData?.courseOutput?.Description}`;
 
         // The text is converted to vector embeddings using the AI model.
         // These vector embeddings contain the actual meaning of the above string in form of vector<float>
@@ -149,14 +150,8 @@ export const updateCourseImageInDb = async (courseId, imageUrl) => {
 
 export const saveChapterContentToDb = async (chapterPayload) => {
     try {
-        const formattedPayload = {
-            ...chapterPayload,
-            chapterId: String(chapterPayload.chapterId),
-            videoId: chapterPayload.videoId || '',
-        };
-
         const result = await db.insert(Chapters)
-            .values(formattedPayload)
+            .values(chapterPayload)
             .returning();
 
         //returns the created new object

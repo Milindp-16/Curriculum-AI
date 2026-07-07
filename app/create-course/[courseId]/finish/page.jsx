@@ -15,7 +15,6 @@ function finishPage({ params }) {
     const courseId = unwrappedParams.courseId;
 
     const [courseInfo, setCourseInfo] = useState(null);
-    const [chapterData, setChapterData] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const router = useRouter();
@@ -28,17 +27,12 @@ function finishPage({ params }) {
             if (!courseId) return;
             setLoading(true);
             try {
-                // Promise.all fetches both database queries simultaneously!
-                const [courseResult, chaptersResult] = await Promise.all([
-                    getCourseById(courseId),
-                    getChaptersByCourseId(courseId)
-                ]);
+                // We only need the course info here, not the chapters
+                const courseResult = await getCourseById(courseId);
 
                 console.log("Fetched Course Info:", courseResult);
-                console.log("Fetched Chapters:", chaptersResult);
 
                 setCourseInfo(courseResult);
-                setChapterData(chaptersResult);
 
             } catch (error) {
                 console.error("Error fetching course data:", error);
@@ -63,7 +57,7 @@ function finishPage({ params }) {
                         <h2 className='font-bold text-2xl gradient-text'>
                             Congrats! Your course is ready 🎉
                         </h2>
-                        <p className='text-slate-400 mt-2 text-sm'>Your AI-generated course has been published and is ready to share</p>
+                        <p className='text-slate-400 mt-2 text-sm'>Your AI-generated course has been generated successfully!</p>
                     </div>
 
 
